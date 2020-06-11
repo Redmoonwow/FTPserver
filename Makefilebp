@@ -1,0 +1,50 @@
+# プログラム名とオブジェクトファイル名
+PROGRAM =	FTPSERVER
+INCLUDE =	./include				\
+			
+#ソースコード設定
+SRCS	:=		
+# manager
+DIR := manager/
+include &(DIR)Makefile
+DIR := CMDmanager/
+include &(DIR)Makefile
+DIR := TRANSmanager/
+include &(DIR)Makefile
+DIR := common/
+include &(DIR)Makefile
+
+OBJS   	= $(SRCS:.cpp=.o)
+			
+
+# 定義済みマクロの再定義
+CC 		= gcc
+CFLAGS 	=	-Wall				\
+			-O3					\
+			-lrt				\
+			-D DEBUG_MODE_ON	\
+			-std=gnu11			\
+			
+
+LDFLAGS =	-O3					\
+			-Wall				\
+			-pthread			\
+			-lrt				\
+
+# サフィックスルール適用対象の拡張子の定義
+.SUFFIXES: .c .o
+
+# リンク
+$(PROGRAM): $(OBJS)
+	$(GCC) $(CFLAGS) -o $@ $+
+
+# サフィックスルール
+.c.o:
+	$(GCC) $(CFLAGS) -c $< -o $@ -I$(INCLUDE)
+	
+default: $(OBJS) $(TARGET)
+
+# ファイル削除用ターゲット
+.PHONY: clean
+clean:
+	$(RM) $(PROGRAM) $(OBJS)

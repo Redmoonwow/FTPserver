@@ -1,0 +1,13 @@
+///////////////////////////////////////////////////////////////////
+// @file cmd_thread.h
+// @date 2020/06/21
+///////////////////////////////////////////////////////////////////
+
+#ifndef _CMD_THREAD_H_
+#define _CMD_THREAD_H_
+
+#include "headers.h"
+#include "command.h"
+
+extern void* Cmdthread(void* argv);
+#endif

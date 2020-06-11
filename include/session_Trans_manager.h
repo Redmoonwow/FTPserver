@@ -1,0 +1,13 @@
+///////////////////////////////////////////////////////////////////
+// @file session_Trans_manager.h
+// @date 2020/06/21
+///////////////////////////////////////////////////////////////////
+
+#ifndef _SESSION_MANAGER_H_
+#define _SESSION_MANAGER_H_
+
+#include "headers.h"
+
+extern void* session_mng_thread(void* argv);
+
+#endif
