@@ -6,6 +6,7 @@
 
 #ifndef __HEADERS_HPP_
 #define __HEADERS_HPP_
+#define _GNU_SOURCE 
 #include <stdint.h>
 #include <time.h>
 #include <stdarg.h>
@@ -26,6 +27,7 @@
 #include <signal.h>
 #include <sys/epoll.h>
 #include <signal.h>
+#include <sched.h>
 
 #include "utility.h"
 #include "config.h"

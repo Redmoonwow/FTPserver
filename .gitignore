@@ -2,5 +2,5 @@
 # この .gitignore ファイルは Microsoft(R) Visual Studio によって自動的に作成されました。
 ################################################################################
 
-/.vs
-/CppProperties.json
+
+/.vs/ftpserver/v16

@@ -28,16 +28,18 @@ static int32_t RecvResAcceptChild(char* e_message);
 static int32_t RecvResQuitChild(char* e_message);
 static int32_t RecvResTransferChild(char* e_message);
 static int32_t RecvReqResetChild(char* e_message);
+static int32_t RecvReqEndSessionChild(char* e_message);
 
 static st_function_msg_list s_function_list [] =
 {
 		//	COMMAND						,FUNC
-	{	FTP_MSG_NTF_START_IDLE_CHILD	,RecvNtfStartIdle		},
-	{	FTP_MSG_RES_ACCEPT_CHILD		,RecvResAcceptChild		},
-	{	FTP_MSG_RES_QUIT_CHILD			,RecvResQuitChild		},
-	{	FTP_MSG_RES_TRANSFER_CMD_CHILD	,RecvResTransferChild	},
-	{	FTP_MSG_REQ_RESET_CHILD			,RecvReqResetChild		},
-	{	0xFFFF							,NULL					}
+	{	FTP_MSG_NTF_START_IDLE_CHILD		,RecvNtfStartIdle			},
+	{	FTP_MSG_RES_ACCEPT_CHILD			,RecvResAcceptChild			},
+	{	FTP_MSG_RES_QUIT_CHILD				,RecvResQuitChild			},
+	{	FTP_MSG_RES_TRANSFER_CMD_CHILD		,RecvResTransferChild		},
+	{	FTP_MSG_REQ_RESET_CHILD				,RecvReqResetChild			},
+	{	FTP_MSG_REQ_END_ALL_SESSION_CHILD	,RecvReqEndSessionChild		},
+	{	0xFFFF								,NULL						}
 };
 
 void* Cmdthread(void* argv)
@@ -64,13 +66,14 @@ void* Cmdthread(void* argv)
 	static __thread int a_epoll_serv_fd;
 	a_epoll_serv_fd  = epoll_create1(0);
 	int a_return = epoll_ctl(a_epoll_serv_fd , EPOLL_CTL_ADD , g_servSock , &s_set_event);
-	if ( ERROR_RETURN == a_return )
+	if ( -1 == a_return )
 	{
 		st_msg_ntf_finish_child a_send_msg;
 		memset(&a_send_msg , 0 , sizeof(a_send_msg));
 		a_send_msg.m_mq_header.m_commandcode = FTP_MSG_NTF_FINISH_CHILD;
-
+		close(a_epoll_serv_fd);
 		a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID, g_my_session_ptr->m_session_id , CHILD_CMD , &a_send_msg , sizeof(a_send_msg));
+		CloseMQ(CMP_NO_CHILD , g_my_session_ptr->m_session_id , CHILD_CMD);
 		return NULL;
 	}
 
@@ -107,6 +110,7 @@ void* Cmdthread(void* argv)
 						shutdown(g_cliantSock, SHUT_RDWR);
 						close(s_epoll_cliant_fd);
 						close(a_epoll_serv_fd);
+						CloseMQ(CMP_NO_CHILD , g_my_session_ptr->m_session_id,CHILD_CMD);
 
 						// I—¹’Ê’m‘—M
 						st_msg_ntf_finish_child a_send_msg;
@@ -122,6 +126,7 @@ void* Cmdthread(void* argv)
 						close(s_epoll_cliant_fd);
 						close(a_epoll_serv_fd);
 						shutdown(g_cliantSock , SHUT_RDWR);
+						CloseMQ(CMP_NO_CHILD , g_my_session_ptr->m_session_id , CHILD_CMD);
 						return NULL;
 					}
 					break;
@@ -168,6 +173,7 @@ void* Cmdthread(void* argv)
 					a_send_msg.m_mq_header.m_commandcode = FTP_MSG_NTF_FINISH_CHILD;
 
 					a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_send_msg , sizeof(a_send_msg));
+					CloseMQ(CMP_NO_CHILD , g_my_session_ptr->m_session_id , CHILD_CMD);
 					return NULL;
 				}
 
@@ -179,6 +185,7 @@ void* Cmdthread(void* argv)
 					a_send_msg.m_mq_header.m_commandcode = FTP_MSG_NTF_FINISH_CHILD;
 
 					a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_send_msg , sizeof(a_send_msg));
+					CloseMQ(CMP_NO_CHILD , g_my_session_ptr->m_session_id , CHILD_CMD);
 					return NULL;
 				}
 
@@ -248,6 +255,7 @@ void* Cmdthread(void* argv)
 							trc("[%s: %d] send error" , __FILE__ , __LINE__);
 							return NULL;
 						}
+						CloseMQ(CMP_NO_CHILD , g_my_session_ptr->m_session_id , CHILD_CMD);
 						return NULL;
 					}
 					else
@@ -488,6 +496,24 @@ int32_t RecvResTransferChild(char* e_message)
 
 int32_t RecvReqResetChild(char* e_message)
 {
+	return RESET_RETURN;
+}
+
+int32_t RecvReqEndSessionChild(char* e_message)
+{
+	int a_return = send(g_cliantSock , RES_ERROR , sizeof(RES_ERROR) , MSG_DONTWAIT);
+	if ( 0 == a_return )
+	{
+		trc("[%s: %d] send error" , __FILE__ , __LINE__);
+		return ERROR_RETURN;
+	}
+
+	st_msg_res_end_all_session_child a_msg;
+	memset(&a_msg , 0 , sizeof(a_msg));
+	a_msg.m_mq_header.m_commandcode = FTP_MSG_RES_END_ALL_SESSION_CHILD;
+
+	SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_msg , sizeof(a_msg));
+
 	return RESET_RETURN;
 }
 

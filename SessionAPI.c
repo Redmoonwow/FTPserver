@@ -40,12 +40,12 @@ int32_t FreeSession(void)
 	return NORMAL_RETURN;
 }
 
-int32_t ClearSession(int32_t e_session_id)
+int32_t ClearSession(int32_t e_session_id,int e_thread_type)
 {
 	trc("[%s: %d] ClearSession start" , __FILE__ , __LINE__);
 	int a_index = 0;
 	// session id 検索
-	for ( a_index = 0; a_index <= 20; a_index++ )
+	for ( a_index = 0; a_index <= SESSION_SUPPORT_MAX; a_index++ )
 	{
 		if ( e_session_id == g_session_data_ptr[a_index]->m_session_id )
 		{
@@ -53,12 +53,31 @@ int32_t ClearSession(int32_t e_session_id)
 		}
 	}
 
-	if ( 20 == a_index )
+	if ( SESSION_SUPPORT_MAX == a_index )
 	{
 		trc("[%s: %d] session not found" , __FILE__ , __LINE__);
 		return ERROR_RETURN;
 	}
-	else
+
+	switch ( e_thread_type )
+	{
+		case CHILD_CMD:
+			g_session_data_ptr [a_index]->m_command_thread_id = 0;
+			memset(&g_session_data_ptr [a_index]->m_command_attr , 0 , sizeof(pthread_attr_t));
+			break;
+		case CHILD_TRANS:
+			g_session_data_ptr [a_index]->m_trans_thread_id = 0;
+			memset(&g_session_data_ptr [a_index]->m_trans_thread_attr , 0 , sizeof(pthread_attr_t));
+			g_session_data_ptr [a_index]->m_fileif_thread_id = 0;
+			memset(&g_session_data_ptr [a_index]->m_fileif_thread_attr , 0 , sizeof(pthread_attr_t));
+			break;
+		default:
+			break;
+	}
+
+	if ( 0 == g_session_data_ptr [a_index]->m_command_thread_id &&
+		 0 == g_session_data_ptr [a_index]->m_trans_thread_id &&
+		 0 == g_session_data_ptr [a_index]->m_fileif_thread_id )
 	{
 		memset(g_session_data_ptr [a_index] , 0 , sizeof(st_session_data));
 		return NORMAL_RETURN;

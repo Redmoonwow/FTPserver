@@ -32,23 +32,25 @@ static int32_t RecvReqQuitChild(char* e_message);
 static int32_t RecvReqTransferChild(char* e_message);
 static int32_t RecvResResetChild(char* e_message);
 static int32_t RecvReqEndSession(char* e_message);
+static int32_t RecvResEndSessionChild(char* e_message);
 
 static st_function_msg_list s_function_list [] =
 {
-		//	COMMAND						,FUNC
-	{	FTP_MSG_NTF_START_IDLE			,RecvStartIDLE			},
-	{	FTP_MSG_REQ_ALIVE_CHECK			,RecvAliveCheck			},
-	{	FTP_MSG_RES_TRANS				,RecvResTransfer		},
+		//	COMMAND							,FUNC
+	{	FTP_MSG_NTF_START_IDLE				,RecvStartIDLE			},
+	{	FTP_MSG_REQ_ALIVE_CHECK				,RecvAliveCheck			},
+	{	FTP_MSG_RES_TRANS					,RecvResTransfer		},
 
 		//  子プロセス
-	{	FTP_MSG_NTF_WAKE_DONE_CHILD		,RecvNtfWakeDoneChild	},
-	{	FTP_MSG_REQ_ACCEPT_CHILD		,RecvReqAcceptChild		},
-	{	FTP_MSG_NTF_FINISH_CHILD		,RecvNtfFinishChild		},
-	{	FTP_MSG_REQ_QUIT_CHILD			,RecvReqQuitChild		},
-	{	FTP_MSG_REQ_TRANSFER_CMD_CHILD	,RecvReqTransferChild	},
-	{	FTP_MSG_RES_RESET_CHILD			,RecvResResetChild		},
-	{	FTP_MSG_REQ_END_ALL_SESSION		,}
-	{	0xFFFF							,NULL}
+	{	FTP_MSG_NTF_WAKE_DONE_CHILD			,RecvNtfWakeDoneChild	},
+	{	FTP_MSG_REQ_ACCEPT_CHILD			,RecvReqAcceptChild		},
+	{	FTP_MSG_NTF_FINISH_CHILD			,RecvNtfFinishChild		},
+	{	FTP_MSG_REQ_QUIT_CHILD				,RecvReqQuitChild		},
+	{	FTP_MSG_REQ_TRANSFER_CMD_CHILD		,RecvReqTransferChild	},
+	{	FTP_MSG_RES_RESET_CHILD				,RecvResResetChild		},
+	{	FTP_MSG_REQ_END_ALL_SESSION			,RecvReqEndSession		},
+	{	FTP_MSG_REQ_END_ALL_SESSION_CHILD	,RecvResEndSessionChild },
+	{	0xFFFF								,NULL}
 };
 
 static int32_t InitSessioncmdMng_thread(void);
@@ -86,6 +88,12 @@ void* SessionDataManager(void* argv)
 				if ( ERROR_RETURN == a_return )
 				{
 					trc("[%s: %d] func error" , __FILE__ , __LINE__);
+				}
+				else if ( END_RETURN == a_return )
+				{
+					trc("[%s: %d] CMD Session Manager END" , __FILE__ , __LINE__);
+					CloseMQ(CMP_NO_SESSION_COMMAND_ID , 0 , 0);
+					return NULL;
 				}
 				break;
 			}
@@ -156,6 +164,35 @@ static int32_t InitSessioncmdMng_thread(void)
 	s_state = WAIT_START_IDLE;
 
 	return NORMAL_RETURN;
+}
+
+int32_t SendEndSessionMsgChild(void)
+{
+	int a_session_id = GetUsedSessionID( );
+	static int s_wait_end_thread;
+	int a_return = 0;
+	st_msg_req_end_all_session_child a_msg;
+	memset(&a_msg , 0 , sizeof(a_msg));
+	a_msg.m_mq_header.m_commandcode = FTP_MSG_REQ_END_ALL_SESSION_CHILD;
+
+	trc("[%s: %d] a_session_id = %d" , __FILE__ , __LINE__, a_session_id);
+
+	if ( 0 == a_session_id )
+	{
+		a_return = s_wait_end_thread;
+		s_wait_end_thread = 0;
+		return a_return;
+	}
+	else
+	{
+		a_return = SendMQ_CHILD(CMP_NO_CHILD , a_session_id , CHILD_CMD , &a_msg , sizeof(a_msg));
+		if ( ERROR_RETURN == a_return )
+		{
+			return ERROR_RETURN;
+		}
+	}
+
+	return SendEndSessionMsgChild( );
 }
 
 static int32_t RecvStartIDLE(char* e_message)
@@ -303,7 +340,7 @@ static int32_t RecvNtfFinishChild(char* e_message)
 	st_msg_res_recvquit_child a_msg;
 	memset(&a_msg , 0 , sizeof(a_msg));
 
-	int a_return = ClearSession(a_recv_msg->m_mq_header.m_session_id);
+	int a_return = ClearSession(a_recv_msg->m_mq_header.m_session_id , CHILD_CMD);
 	if ( ERROR_RETURN == a_return )
 	{
 		return ERROR_RETURN;
@@ -346,5 +383,29 @@ static int32_t RecvResResetChild(char* e_message)
 
 int32_t RecvReqEndSession(char* e_message)
 {
-	return int32_t( );
+	s_need_end_thread_cnt =  SendEndSessionMsgChild( );
+
+	if ( ERROR_RETURN == s_need_end_thread_cnt )
+	{
+		return END_RETURN;
+	}
+
+	return NORMAL_RETURN;
+}
+
+int32_t RecvResEndSessionChild(char* e_message)
+{
+	static int s_end_thread = 0;
+
+	s_end_thread++;
+
+	if ( s_end_thread == s_need_end_thread_cnt )
+	{
+		st_msg_res_end_all_session a_msg;
+		memset(&a_msg , 0 , sizeof(a_msg));
+		a_msg.m_mq_header.m_commandcode = FTP_MSG_RES_END_ALL_SESSION;
+
+		SendMQ(CMP_NO_INIT_MANAGER_ID , CMP_NO_SESSION_COMMAND_ID , &a_msg , sizeof(a_msg));
+	}
+	return END_RETURN;
 }

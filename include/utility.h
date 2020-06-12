@@ -26,7 +26,7 @@ extern void trc(const char* e_string , ...);
 extern int InitUtilitis(void);
 extern int CloseUtilities(void);
 extern int32_t OpenMQ(int32_t e_mq_name);
-extern int32_t CloseMQ(mqd_t* e_mq_id);
+extern int32_t CloseMQ(int e_src_mq_id , int e_session_id , int e_thread_type);
 extern int32_t SendMQ(int e_dst_mq_id , int e_src_mq_id , void* e_send_msg , int32_t e_msg_size);
 extern int32_t RecvMQ(int e_src_mq_id , void* e_recv_msg , int32_t e_msg_size );
 extern int32_t RecvMQtimeout(int e_src_mq_id , void* e_recv_msg , int32_t e_msg_size , int32_t e_timeout);

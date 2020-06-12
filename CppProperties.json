@@ -1,0 +1,20 @@
+{
+  "configurations": [
+    {
+      "inheritEnvironments": [
+        "linux_x64"
+      ],
+      "name": "x64-Debug",
+      "includePath": [
+        "D:\\works\\headers\\include\\**",
+        "${workspaceRoot}\\include\\**",
+        "D:\\works\\headers\\lib\\gcc\\x86_64-redhat-linux\\4.8.2\\include\\**"
+      ],
+      "defines": [
+        "__LINUX",
+        "_DEBUG"
+      ],
+      "intelliSenseMode": "linux-gcc-x64"
+    }
+  ]
+}

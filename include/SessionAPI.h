@@ -53,7 +53,7 @@ extern st_session_data* g_session_data_ptr [SESSION_SUPPORT_MAX];
 
 extern int32_t InitSession(void);
 extern int32_t FreeSession(void);
-extern int32_t ClearSession(int32_t e_session_id);
+extern int32_t ClearSession(int32_t e_session_id , int e_thread_type);
 extern st_session_data* CreateSession(void);
 extern st_session_data* SearchSession(int32_t e_session_id);
 extern int32_t WakeThreadCommand(st_session_data* e_session_ptr);

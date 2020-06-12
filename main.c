@@ -108,7 +108,7 @@ static int32_t StartFtpServer(void)
 			{
 				return ERROR_RETURN;
 			}
-			int a_return = SendMQ(CMP_NO_SESSION_TRANS_ID , CMP_NO_INIT_MANAGER_ID , &a_end_msg , sizeof(a_end_msg));
+			a_return = SendMQ(CMP_NO_SESSION_TRANS_ID , CMP_NO_INIT_MANAGER_ID , &a_end_msg , sizeof(a_end_msg));
 			if ( ERROR_RETURN == a_return )
 			{
 				return ERROR_RETURN;

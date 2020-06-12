@@ -136,7 +136,7 @@ int32_t OpenMQ(int32_t e_mq_name)
 {
 
 	struct mq_attr a_mq_attr;
-	trc("[%s: %d] OpenMQ START" , __FILE__ , __LINE__);
+	trc("[%s: %d] OpenMQ START PID= %d" , __FILE__ , __LINE__ , getppid( ));
 	memset(&a_mq_attr , 0 , sizeof(a_mq_attr));
 	a_mq_attr.mq_flags = 0;
 	a_mq_attr.mq_maxmsg = 30;
@@ -146,7 +146,7 @@ int32_t OpenMQ(int32_t e_mq_name)
 	memset(&a_buf , 0 , sizeof(a_buf));
 	sprintf(a_buf , "/proc_%04d" , e_mq_name);
 	mq_unlink(a_buf);
-	
+
 	s_my_mqdt =  mq_open(a_buf , O_CREAT | O_EXCL | O_RDWR , S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH , NULL);
 
 	if ( -1 == s_my_mqdt )
@@ -170,13 +170,13 @@ int32_t OpenMQ_CHILD(int32_t e_session_id,int e_child_type)
 {
 
 	struct mq_attr a_mq_attr;
-	trc("[%s: %d] OpenMQ START" , __FILE__ , __LINE__);
+	trc("[%s: %d] OpenMQ START PID= %d" , __FILE__ , __LINE__ , getppid( ));
 	memset(&a_mq_attr , 0 , sizeof(a_mq_attr));
 	a_mq_attr.mq_flags = 0;
 	a_mq_attr.mq_maxmsg = 30;
 	a_mq_attr.mq_msgsize = sizeof(sizeof(char) * 10240);
 
-	char a_buf [256];
+	char a_buf [1024];
 	memset(&a_buf , 0 , sizeof(a_buf));
 	switch ( e_child_type )
 	{
@@ -211,13 +211,34 @@ int32_t OpenMQ_CHILD(int32_t e_session_id,int e_child_type)
 	return NORMAL_RETURN;
 }
 
-int32_t CloseMQ(mqd_t* e_mq_id)
+int32_t CloseMQ(int e_src_mq_id , int e_session_id, int e_child_type)
 {
-	int a_return = mq_close(*e_mq_id);
-	if ( -1 == a_return )
+	char a_buf [1024];
+	memset(&a_buf , 0 , sizeof(a_buf));
+
+	mq_close(s_my_mqdt);
+
+	if ( CMP_NO_CHILD == e_src_mq_id )
 	{
-		return ERROR_RETURN;
+		switch ( e_child_type )
+		{
+			case CHILD_CMD:
+				sprintf(a_buf , "/proc_child_cmd_%04d" , e_session_id);
+				break;
+			case CHILD_FILEIF:
+				sprintf(a_buf , "/proc_child_fileif_%04d" , e_session_id);
+				break;
+			case CHILD_TRANS:
+				sprintf(a_buf , "/proc_child_trans_%04d" , e_session_id);
+				break;
+		}
 	}
+	else
+	{
+		sprintf(a_buf , "/proc_%04d" , e_src_mq_id);
+	}
+
+	mq_unlink(a_buf);
 
 	return NORMAL_RETURN;
 }
