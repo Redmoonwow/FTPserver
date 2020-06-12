@@ -6,9 +6,9 @@
       ],
       "name": "x64-Debug",
       "includePath": [
+        "D:\\works\\headers\\lib\\gcc\\x86_64-redhat-linux\\4.8.2\\include\\**",
         "D:\\works\\headers\\include\\**",
-        "${workspaceRoot}\\include\\**",
-        "D:\\works\\headers\\lib\\gcc\\x86_64-redhat-linux\\4.8.2\\include\\**"
+        "${workspaceRoot}\\include\\**"
       ],
       "defines": [
         "__LINUX",

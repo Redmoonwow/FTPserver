@@ -5,6 +5,16 @@
 
 #include "utility.h"
 
+
+typedef struct st_thread_stack_ptr
+{
+	char*				m_stack_memory;			//8
+	char*				m_stack_memory_top;		//8
+	pid_t				m_tid;					//4
+	struct user_desc	m_tls_d;				//16
+	char				m_pad [4];				//4
+}st_thread_stack_ptr;
+
 static int Gettimeprintformat(char* e_time_ptr , int32_t e_ptr_datasize); // 現時刻取得
 
 static FILE*					s_trc_ptr;								// トレースログファイル
@@ -15,6 +25,7 @@ static uint8_t					s_Init_done = 0;
 static __thread	uint32_t		s_msg_ref;
 static __thread struct sigevent s_sigevt;
 static __thread mqd_t			s_my_mqdt = 0;
+static st_thread_stack_ptr		s_thread_list [SESSION_SUPPORT_MAX * 3]; // FILEIF TRANS CMD分
 
 /// ユーティリティAPI初期化
 int InitUtilitis(void)
@@ -27,7 +38,7 @@ int InitUtilitis(void)
 	localtime_r(&(a_now_time.tv_sec) , &a_localtime);
 
 	memset(s_trc_filename , 0 , sizeof(s_trc_filename));
-
+	memset(s_thread_list , 0 , (sizeof(st_thread_stack_ptr) * (SESSION_SUPPORT_MAX * 3)));
 	// トレースログ名作成
 	sprintf(s_trc_filename , "./trc_log/%s_%d_%d_NO:%d.log" , s_template_filename , a_localtime.tm_mon , a_localtime.tm_mday , s_template_file_no );
 
@@ -121,6 +132,82 @@ void trc(const char* e_string , ...)
 }
 
 /*
+ * スレッドライブラリ
+ *　pthreadライクなスレッド生成を行う // CMDスレッドなどはディレクトリFSを独自にもつひつようがあるため　
+ *　
+ */
+
+#define ___PTHREAD_DEFAULT (1024 * 96)
+pid_t Create_Cmp(int e_flag , void* (*e_start_routine) (void*) , void* e_arg)
+{
+	int a_index = 0;
+	int a_found = 0;
+	// 空いているスレッド情報リストを探す
+	for ( a_index = 0; a_index < (SESSION_SUPPORT_MAX * 3) ; a_index++)
+	{
+		if ( 0 == s_thread_list [a_index].m_tid )
+		{
+			a_found = 1;
+			break;
+		}
+	}
+
+	if ( 0 == a_found )
+	{
+		trc("[%s: %d] thread_list use full" , __FILE__ , __LINE__ );
+		return -1;
+	}
+
+	s_thread_list [a_index].m_stack_memory = malloc(___PTHREAD_DEFAULT);
+	if ( NULL == s_thread_list [a_index].m_stack_memory )
+	{
+		trc("[%s: %d] malloc error" , __FILE__ , __LINE__);
+	}
+	s_thread_list [a_index].m_stack_memory_top = s_thread_list [a_index].m_stack_memory + ___PTHREAD_DEFAULT;
+
+	s_thread_list [a_index].m_tid = clone((int(*)(void*))e_start_routine ,s_thread_list [a_index].m_stack_memory_top ,
+										    e_flag | CLONE_SIGHAND | CLONE_VM | CLONE_THREAD | CLONE_SYSVSEM  | CLONE_PARENT | CLONE_SETTLS,
+										   (e_arg),&s_thread_list [a_index].m_tls_d);
+
+	if ( 0 == s_thread_list [a_index].m_tid )
+	{
+		trc("[%s: %d] thread create fail" , __FILE__ , __LINE__);
+		s_thread_list [a_index].m_tid = 0;
+		free(s_thread_list [a_index].m_stack_memory);
+		s_thread_list [a_index].m_stack_memory_top = 0;
+		return -1;
+	}
+	return s_thread_list [a_index].m_tid;
+}
+
+int CloseCmp(pid_t e_tid)
+{
+	int a_index = 0;
+	int a_found = 0;
+	// 空いているスレッド情報リストを探す
+	for ( a_index = 0; a_index < (SESSION_SUPPORT_MAX * 3); a_index++ )
+	{
+		if ( e_tid == s_thread_list [a_index].m_tid )
+		{
+			a_found = 1;
+			break;
+		}
+	}
+
+	if ( 0 == a_found )
+	{
+		trc("[%s: %d] thread_list not found" , __FILE__ , __LINE__);
+		return ERROR_RETURN;
+	}
+
+	s_thread_list [a_index].m_tid = 0;
+	free(s_thread_list [a_index].m_stack_memory);
+	s_thread_list [a_index].m_stack_memory_top = 0;
+
+	return NORMAL_RETURN;
+}
+
+/*
  * メッセージキューライブラリ
  *
  */
@@ -131,6 +218,8 @@ void ref_mq_thread(union sigval e_val)
 
 	return;
 }
+
+
 
 int32_t OpenMQ(int32_t e_mq_name)
 {

@@ -208,14 +208,17 @@ static int32_t RecvStartIDLE(char* e_message)
 
 	st_session_data* a_session_data= CreateSession( );
 
-
+	#if 1 // 202006012 clone関数でthread生成に変更
 	pthread_attr_init(&a_session_data->m_command_attr);
 	pthread_attr_setdetachstate(&a_session_data->m_command_attr , PTHREAD_CREATE_DETACHED);
-
 	// コマンドスレッド起動
 	int a_return = pthread_create(&a_session_data->m_command_thread_id , &a_session_data->m_command_attr , Cmdthread , (void*)&(a_session_data->m_session_id));
-	if ( 0 != a_return )
+	#else
+	int a_return = Create_Cmp(CLONE_NEWNS , Cmdthread , (void*) & (a_session_data->m_session_id));
+	#endif
+	if ( -1 == a_return )
 	{
+		trc("[%s: %d] Create_Cmp error" , __FILE__ , __LINE__);
 		return ERROR_RETURN;
 	}
 	trc("[%s: %d] First cmd thread start" , __FILE__ , __LINE__);
@@ -301,15 +304,26 @@ static int32_t RecvReqAcceptChild(char* e_message)
 
 	st_session_data* a_session_data = CreateSession( );
 
+	#if 0 // 202006012 clone関数でthread生成に変更
 	pthread_attr_init(&a_session_data->m_command_attr);
 	pthread_attr_setdetachstate(&a_session_data->m_command_attr , PTHREAD_CREATE_DETACHED);
-
 	// コマンドスレッド起動
 	a_return = pthread_create(&a_session_data->m_command_thread_id , &a_session_data->m_command_attr , Cmdthread , (void*) & (a_session_data->m_session_id));
 	if ( 0 != a_return )
 	{
 		return ERROR_RETURN;
 	}
+	#else
+	a_return = Create_Cmp(CLONE_NEWNS , &Cmdthread , (void*) & (a_session_data->m_session_id));
+	if ( -1 == a_return )
+	{
+		trc("[%s: %d] Create thread fail" , __FILE__ , __LINE__);
+	}
+	else
+	{
+		a_session_data->m_command_thread_id = a_return;
+	}
+	#endif
 	trc("[%s: %d] Next cmd thread start" , __FILE__ , __LINE__);
 
 	return NORMAL_RETURN;
@@ -367,12 +381,15 @@ static int32_t RecvResResetChild(char* e_message)
 
 	st_session_data* a_session_ptr = SearchSession(a_msg->m_mq_header.m_session_id);
 
+	// コマンドスレッド起動
+	#if 0
 	pthread_attr_init(&a_session_ptr->m_command_attr);
 	pthread_attr_setdetachstate(&a_session_ptr->m_command_attr , PTHREAD_CREATE_DETACHED);
 
-	// コマンドスレッド起動
 	int a_return = pthread_create(&a_session_ptr->m_command_thread_id , &a_session_ptr->m_command_attr , Cmdthread , (void*) & (a_session_ptr->m_session_id));
-	if ( 0 != a_return )
+	#endif
+	int a_return = Create_Cmp(CLONE_NEWNS , &Cmdthread , ((void*) & (a_session_ptr->m_session_id)));
+	if ( -1 == a_return )
 	{
 		return ERROR_RETURN;
 	}

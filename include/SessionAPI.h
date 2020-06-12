@@ -30,6 +30,7 @@ typedef enum
 	CHILD_TRANS_STATE_WAIT
 }en_childstate;
 
+#if 1 // 202006012 cloneŠÖ”‚Åthread¶¬‚É•ÏX
 typedef struct st_session_data
 {
 	en_childstate	m_child_cmd_state;
@@ -48,6 +49,23 @@ typedef struct st_session_data
 	char*			m_trans__mq_name;
 	char*			m__fileif_thread_mq_name;
 }st_session_data;
+#else
+typedef struct st_session_data
+{
+	en_childstate	m_child_cmd_state;
+	en_childstate	m_Trans_cmd_state;
+	int32_t			m_session_id;
+	char			m_use_filepath [PATH_MAX];
+	int32_t			m_session_command;
+	int32_t			m_port;
+	pid_t			m_command_thread_id;
+	pid_t			m_trans_thread_id;
+	pid_t			m_fileif_thread_id;
+	char*			m_command_thread_mq_name;
+	char*			m_trans__mq_name;
+	char*			m__fileif_thread_mq_name;
+}st_session_data;
+#endif
 
 extern st_session_data* g_session_data_ptr [SESSION_SUPPORT_MAX];
 

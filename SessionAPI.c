@@ -63,13 +63,19 @@ int32_t ClearSession(int32_t e_session_id,int e_thread_type)
 	{
 		case CHILD_CMD:
 			g_session_data_ptr [a_index]->m_command_thread_id = 0;
+			#if 0 // 202006012 clone関数でthread生成に変更
 			memset(&g_session_data_ptr [a_index]->m_command_attr , 0 , sizeof(pthread_attr_t));
+			#endif
 			break;
 		case CHILD_TRANS:
 			g_session_data_ptr [a_index]->m_trans_thread_id = 0;
+			#if 0 // 202006012 clone関数でthread生成に変更
 			memset(&g_session_data_ptr [a_index]->m_trans_thread_attr , 0 , sizeof(pthread_attr_t));
+			#endif
 			g_session_data_ptr [a_index]->m_fileif_thread_id = 0;
+			#if 0 // 202006012 clone関数でthread生成に変更
 			memset(&g_session_data_ptr [a_index]->m_fileif_thread_attr , 0 , sizeof(pthread_attr_t));
+			#endif
 			break;
 		default:
 			break;
