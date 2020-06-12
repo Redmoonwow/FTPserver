@@ -1,0 +1,53 @@
+[03:21:19] [main.c: 80] start ftpserver
+[03:21:19] [utility.c: 228] OpenMQ START PID= 2813
+[03:21:19] [SessionAPI.c: 17] InitSession start
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 0 = 0x17507c0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 1 = 0x17518c0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 2 = 0x17529c0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 3 = 0x1753ac0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 4 = 0x1754bc0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 5 = 0x1755cc0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 6 = 0x1756dc0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 7 = 0x1757ec0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 8 = 0x1758fc0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 9 = 0x175a0c0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 10 = 0x175b1c0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 11 = 0x175c2c0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 12 = 0x175d3c0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 13 = 0x175e4c0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 14 = 0x175f5c0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 15 = 0x17606c0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 16 = 0x17617c0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 17 = 0x17628c0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 18 = 0x17639c0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 19 = 0x1764ac0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 20 = 0x1765bc0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 21 = 0x1766cc0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 22 = 0x1767dc0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 23 = 0x1768ec0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 24 = 0x1769fc0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 25 = 0x176b0c0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 26 = 0x176c1c0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 27 = 0x176d2c0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 28 = 0x176e3c0
+[03:21:19] [SessionAPI.c: 23] g_session_data_ptr 29 = 0x176f4c0
+[03:21:19] [main.c: 88] Init Done
+[03:21:19] [session_cmd_manager.c: 61] CMD SESSION START
+[03:21:19] [session_cmd_manager.c: 113] InitSessioncmdMng_threadN START
+[03:21:19] [utility.c: 228] OpenMQ START PID= 2813
+[03:21:19] [session_cmd_manager.c: 134] Init DONE
+[03:21:19] [session_Trans_manager.c: 36] TRANS SESSION START
+[03:21:19] [session_Trans_manager.c: 89] InitSessionMng_thread START
+[03:21:19] [utility.c: 228] OpenMQ START PID= 2813
+[03:21:19] [session_Trans_manager.c: 95] Init DONE
+[03:21:19] [main.c: 209] RecvWakeDone
+[03:21:19] [main.c: 228] RecvWakeDone CMP_NO_SESSION_COMMAND_ID
+[03:21:19] [main.c: 251] Manager Proc start
+[03:21:19] [main.c: 252] RecvWakeDone END
+[03:21:19] [main.c: 209] RecvWakeDone
+[03:21:19] [main.c: 233] RecvWakeDone CMP_NO_SESSION_TRANS_ID
+[03:21:19] [main.c: 251] Manager Proc start
+[03:21:19] [main.c: 252] RecvWakeDone END
+[03:21:20] [session_cmd_manager.c: 200] start idle
+[03:21:20] [session_cmd_manager.c: 207] CMD Manager Proc start
+[03:21:20] [SessionAPI.c: 97] CreateSes

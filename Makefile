@@ -4,13 +4,8 @@ PROGRAM =	FTPSERVER
 CFLAGS :=	-I./include			\
 			-D DEBUG_MODE_ON	\
 			
-OBJS	=	utility.o				\
-			command.o				\
-			session_cmd_manager.o	\
-			session_Trans_manager.o	\
-			SessionAPI.o			\
-			cmd_thread.o			\
-			main.o					\
+SOURCES=$(wildcard src/*.c)
+OBJECTS=$(addprefix obj/,$(notdir $(SOURCES:.c=.o)))
 
 # 定義済みマクロの再定義
 CC = gcc
@@ -31,14 +26,18 @@ LDFLAGS =	-O3					\
 .SUFFIXES: .c .o
 
 # プライマリターゲット
-$(PROGRAM): $(OBJS)
+$(PROGRAM): $(OBJECTS)
 	$(CC) $(LDFLAGS) -o $(PROGRAM) $^
 
+.SUFFIXES: .o .c
+
 # サフィックスルール
-.c.o:
-	$(CC) $(CFLAGS) -c $<
+#.c.o:
+obj/%.o : src/%.c
+	$(CC) $(CFLAGS) -o $@ -c $<
+
 
 # ファイル削除用ターゲット
 .PHONY: clean
 clean:
-	$(RM) $(PROGRAM) $(OBJS)
+	$(RM) $(PROGRAM) $(OBJECTS)
