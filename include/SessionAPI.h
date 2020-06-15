@@ -25,9 +25,12 @@ typedef enum
 	CHILD_CMD_STATE_WAIT_PROCESS_DONE,
 	CHILD_CMD_STATE_WAIT_END,
 
-	CHILD_TRANS_STATE_WAIT_ACCPET = 0x1000,
+	CHILD_TRANS_STATE_WAIT_MSG = 0x1000,
+	CHILD_TRANS_STATE_CONNECT,
+	CHILD_TRANS_STATE_WAIT_PUSH,
 	CHILD_TRANS_STATE_TRANSING,
-	CHILD_TRANS_STATE_WAIT
+	CHILD_TRANS_STATE_RECVING,
+	CHILD_TRANS_STATE_WAIT_END
 }en_childstate;
 
 #if 1 // 202006012 cloneä÷êîÇ≈threadê∂ê¨Ç…ïœçX
@@ -40,15 +43,22 @@ typedef struct st_session_data
 	int32_t			m_session_command;
 	int32_t			m_port;
 	pthread_t		m_command_thread_id;
-	pthread_attr_t	m_command_attr;
 	pthread_t		m_trans_thread_id;
-	pthread_attr_t	m_trans_thread_attr;
 	pthread_t		m_fileif_thread_id;
-	pthread_attr_t	m_fileif_thread_attr;
-	char*			m_command_thread_mq_name;
-	char*			m_trans__mq_name;
-	char*			m__fileif_thread_mq_name;
+	struct st_session_flags
+	{
+		int				m_QUIT_flags;					// QUITÉtÉâÉO
+		int				m_END_flags;
+		int				m_pasv_flags;
+		uint8_t			m_cliant_addr[4];				// ip1 ip2 ip3 ip4
+		uint16_t		m_cliant_port;
+		int				m_typemode_flag;
+		int				m_abort_flag;
+		int				m_port_req_flag;
+		int				m_reserve;
+	}m_session_flags;
 }st_session_data;
+
 #else
 typedef struct st_session_data
 {
@@ -66,8 +76,6 @@ typedef struct st_session_data
 	char*			m__fileif_thread_mq_name;
 }st_session_data;
 #endif
-
-extern st_session_data* g_session_data_ptr [SESSION_SUPPORT_MAX];
 
 extern int32_t InitSession(void);
 extern int32_t FreeSession(void);

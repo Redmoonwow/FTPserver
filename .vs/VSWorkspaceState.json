@@ -1,8 +1,9 @@
 {
   "ExpandedNodes": [
     "",
-    "\\include"
+    "\\include",
+    "\\src"
   ],
-  "SelectedNode": "\\include\\utility.h",
+  "SelectedNode": "\\include\\command.h",
   "PreviewInSolutionExplorer": false
 }

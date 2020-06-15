@@ -24,12 +24,10 @@ static st_session_data_state s_state = WAIT_INIT;
 // FUNCTION PROT
 static int32_t RecvStartIDLE(char* e_message);
 static int32_t RecvAliveCheck(char* e_message);
-static int32_t RecvResTransfer(char* e_message);
 static int32_t RecvNtfWakeDoneChild(char* e_message);
 static int32_t RecvReqAcceptChild(char* e_message);
 static int32_t RecvNtfFinishChild(char* e_message);
 static int32_t RecvReqQuitChild(char* e_message);
-static int32_t RecvReqTransferChild(char* e_message);
 static int32_t RecvResResetChild(char* e_message);
 static int32_t RecvReqEndSession(char* e_message);
 static int32_t RecvResEndSessionChild(char* e_message);
@@ -39,14 +37,11 @@ static st_function_msg_list s_function_list [] =
 		//	COMMAND							,FUNC
 	{	FTP_MSG_NTF_START_IDLE				,RecvStartIDLE			},
 	{	FTP_MSG_REQ_ALIVE_CHECK				,RecvAliveCheck			},
-	{	FTP_MSG_RES_TRANS					,RecvResTransfer		},
-
 		//  子プロセス
 	{	FTP_MSG_NTF_WAKE_DONE_CHILD			,RecvNtfWakeDoneChild	},
 	{	FTP_MSG_REQ_ACCEPT_CHILD			,RecvReqAcceptChild		},
 	{	FTP_MSG_NTF_FINISH_CHILD			,RecvNtfFinishChild		},
 	{	FTP_MSG_REQ_QUIT_CHILD				,RecvReqQuitChild		},
-	{	FTP_MSG_REQ_TRANSFER_CMD_CHILD		,RecvReqTransferChild	},
 	{	FTP_MSG_RES_RESET_CHILD				,RecvResResetChild		},
 	{	FTP_MSG_REQ_END_ALL_SESSION			,RecvReqEndSession		},
 	{	FTP_MSG_REQ_END_ALL_SESSION_CHILD	,RecvResEndSessionChild },
@@ -111,6 +106,7 @@ void* SessionDataManager(void* argv)
 static int32_t InitSessioncmdMng_thread(void)
 {
 	trc("[%s: %d] InitSessioncmdMng_threadN START" , __FILE__ , __LINE__);
+
 	// TCPソケット生成
 	g_servSock = socket(AF_INET , SOCK_STREAM , 0);
 
@@ -209,10 +205,11 @@ static int32_t RecvStartIDLE(char* e_message)
 	st_session_data* a_session_data= CreateSession( );
 
 	#if 1 // 202006012 clone関数でthread生成に変更
-	pthread_attr_init(&a_session_data->m_command_attr);
-	pthread_attr_setdetachstate(&a_session_data->m_command_attr , PTHREAD_CREATE_DETACHED);
+	pthread_attr_t a_attr;
+	pthread_attr_init(&a_attr);
+	pthread_attr_setdetachstate(&a_attr , PTHREAD_CREATE_DETACHED);
 	// コマンドスレッド起動
-	int a_return = pthread_create(&a_session_data->m_command_thread_id , &a_session_data->m_command_attr , Cmdthread , (void*)&(a_session_data->m_session_id));
+	int a_return = pthread_create(&a_session_data->m_command_thread_id , &a_attr , Cmdthread , (void*)&(a_session_data->m_session_id));
 	#else
 	int a_return = Create_Cmp(CLONE_NEWNS , Cmdthread , (void*) & (a_session_data->m_session_id));
 	#endif
@@ -240,12 +237,6 @@ static int32_t RecvAliveCheck(char* e_message)
 		return ERROR_RETURN;
 	};
 	trc("[%s: %d] RecvAliveCheck end" , __FILE__ , __LINE__);
-	return NORMAL_RETURN;
-}
-
-static int32_t RecvResTransfer(char* e_message)
-{
-	// まだつくってない
 	return NORMAL_RETURN;
 }
 
@@ -304,11 +295,12 @@ static int32_t RecvReqAcceptChild(char* e_message)
 
 	st_session_data* a_session_data = CreateSession( );
 
-	#if 0 // 202006012 clone関数でthread生成に変更
-	pthread_attr_init(&a_session_data->m_command_attr);
-	pthread_attr_setdetachstate(&a_session_data->m_command_attr , PTHREAD_CREATE_DETACHED);
+	#if 1 // 202006012 clone関数でthread生成に変更
+	pthread_attr_t a_attr;
+	pthread_attr_init(&a_attr);
+	pthread_attr_setdetachstate(&a_attr , PTHREAD_CREATE_DETACHED);
 	// コマンドスレッド起動
-	a_return = pthread_create(&a_session_data->m_command_thread_id , &a_session_data->m_command_attr , Cmdthread , (void*) & (a_session_data->m_session_id));
+	a_return = pthread_create(&a_session_data->m_command_thread_id , &a_attr , Cmdthread , (void*) & (a_session_data->m_session_id));
 	if ( 0 != a_return )
 	{
 		return ERROR_RETURN;
@@ -360,12 +352,6 @@ static int32_t RecvNtfFinishChild(char* e_message)
 		return ERROR_RETURN;
 	};
 
-	return NORMAL_RETURN;
-}
-
-static int32_t RecvReqTransferChild(char* e_message)
-{
-	// まだつくってない
 	return NORMAL_RETURN;
 }
 

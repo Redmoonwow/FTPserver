@@ -24,9 +24,9 @@ static int32_t RecvAliveCheck(char* e_message);
 static st_function_msg_list s_function_list[]=
 {
 	//	COMMAND						,FUNC
-{	FTP_MSG_NTF_START_IDLE			,StartIDLE},
-{	FTP_MSG_REQ_ALIVE_CHECK		,RecvAliveCheck},
-{	0xFFFF						,NULL}
+{	FTP_MSG_NTF_START_IDLE			,StartIDLE		},
+{	FTP_MSG_REQ_ALIVE_CHECK			,RecvAliveCheck	},
+{	0xFFFF							,NULL			}
 };
 
 static int32_t InitSessionMng_thread(void);

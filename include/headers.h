@@ -29,6 +29,7 @@
 #include <signal.h>
 #include <sched.h>
 #include <asm/ldt.h>
+#include <sys/types.h>
 
 #include "utility.h"
 #include "config.h"

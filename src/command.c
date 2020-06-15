@@ -5,33 +5,33 @@
 
 #include "command.h"
 
-int D_USER(char* e_args);
-int D_PASS(char* e_args);
-int D_QUIT(char* e_args);
-int D_CWD(char* e_args);
-int D_CDUP(char* e_args);
-int D_REIN(char* e_args);
-int D_PORT(char* e_args);
-int D_PASV(char* e_args);
-int D_TYPE(char* e_args);
-int D_RETR(char* e_args);
-int D_STOR(char* e_args);
-int D_APPE(char* e_args);
-int D_RNFR(char* e_args);
-int D_RNFO(char* e_args);
-int D_ABOR(char* e_args);
-int D_DELE(char* e_args);
-int D_RMD(char* e_args);
-int D_MKD(char* e_args);
-int D_PWD(char* e_args);
-int D_XPWD(char* e_args);
-int D_NLST(char* e_args);
-int D_LIST(char* e_args);
-int D_SYST(char* e_args);
-int D_STAT(char* e_args);
-int D_HELP(char* e_args);
-int D_NOOP(char* e_args);
-int D_FEAT(char* e_args);
+int D_USER(char* e_args);	//実装状況 △ jsonでの実装予定
+int D_PASS(char* e_args);	//実装状況 △ jsonでの実装予定
+int D_QUIT(char* e_args);	//実装状況 〇
+int D_CWD(char* e_args);	//実装状況 〇 DEBUG
+int D_CDUP(char* e_args);	//実装状況 〇 DEBUG
+int D_REIN(char* e_args);	//実装状況 ×
+int D_PORT(char* e_args);	//実装状況 〇 DEBUG
+int D_PASV(char* e_args);	//実装状況
+int D_TYPE(char* e_args);	//実装状況
+int D_RETR(char* e_args);	//実装状況
+int D_STOR(char* e_args);	//実装状況
+int D_APPE(char* e_args);	//実装状況
+int D_RNFR(char* e_args);	//実装状況
+int D_RNFO(char* e_args);	//実装状況
+int D_ABOR(char* e_args);	//実装状況
+int D_DELE(char* e_args);	//実装状況
+int D_RMD(char* e_args);	//実装状況
+int D_MKD(char* e_args);	//実装状況
+int D_PWD(char* e_args);	//実装状況
+int D_XPWD(char* e_args);	//実装状況
+int D_NLST(char* e_args);	//実装状況
+int D_LIST(char* e_args);	//実装状況
+int D_SYST(char* e_args);	//実装状況
+int D_STAT(char* e_args);	//実装状況
+int D_HELP(char* e_args);	//実装状況
+int D_NOOP(char* e_args);	//実装状況
+int D_FEAT(char* e_args);	//実装状況
 
 static int responce(char* e_res , int e_res_size);
 static int responcepsv(int e_port);
@@ -40,13 +40,9 @@ static int responcepsv(int e_port);
 /// Global
 extern __thread int					g_cliantSock;
 extern __thread int					g_servSock;
-extern __thread int					g_QUIT_flags;
-extern __thread int					g_pasv_flags;
-extern __thread int					g_cliant_port [5]; // ip1 ip2 ip3 ip4 port
-extern __thread int					g_typemode;
+extern __thread st_session_data*	g_my_session_ptr;
 
 static char s_def_dir_name[256] = "/home";
-static char s_RNFR_dir [256] = { 0 };
 
 st_command_list g_command_list [] =
 {
@@ -124,13 +120,19 @@ int D_PASS(char* e_args)
 int D_QUIT(char* e_args)
 {
 	trc("[%s: %d] select QUIT" , __FILE__ , __LINE__);
-	g_QUIT_flags = 1;
+	g_my_session_ptr->m_session_flags.m_QUIT_flags = 1;
 	return NORMAL_RETURN;
 }
 
 int D_CWD(char* e_args)
 {
-	// ディレクトリが存在するか確認
+	char* a_realpath = NULL;
+	if ( NULL == realpath(e_args , a_realpath) )
+	{
+		return RESPONCE(RES_FAIL_CD);
+	}
+
+	// ワーキングディレクトリ変更
 	if ( 0 == chdir(e_args) )
 	{
 		return RESPONCE(RES_REQ_END);
@@ -145,13 +147,21 @@ int D_CWD(char* e_args)
 
 int D_CDUP(char* e_args)
 {
-	// ディレクトリが存在するか確認
-	if ( 0 == chdir("..") )
+	char* a_realpath = NULL;
+	if ( NULL == realpath(".." , a_realpath) )
 	{
+		return RESPONCE(RES_FAIL_CD);
+	}
+
+	// ディレクトリが存在するか確認
+	if ( 0 == chdir("a_realpath") )
+	{
+		free(a_realpath);
 		return RESPONCE(RES_REQ_END);
 	}
 	else
 	{
+		free(a_realpath);
 		return RESPONCE(RES_FAIL_CD);
 	}
 
@@ -163,56 +173,100 @@ int D_REIN(char* e_args)
 	return RESPONCE(RES_COMMAND_NONE);
 }
 
+// XXX:せぐふぉ対策してない
 int D_PORT(char* e_args)
 {
-	g_pasv_flags = PASV_OFF;
+	g_my_session_ptr->m_session_flags.m_pasv_flags = PASV_PORT;
+	int a_addr_get_done = 0;
 	int a_index = 0;
-	for ( ;; a_index++ )
+	char a_buf [4];
+	int a_buf_index = 0;
+	int a_port_high = 0;
+	int a_port_high_done = 0;
+	int a_port_row = 0;
+
+	int a_timeout = 0;
+	memset(&a_buf , 0 , sizeof(a_buf));
+	while ( 1 )
 	{
 			// ip addr
-		if ( '(' == *e_args )
+		if ( '(' == *e_args ||
+			 ')' == *e_args ||
+			 ' ' == *e_args)
 		{
 			e_args++;
-		}
-
-		g_cliant_port [a_index] = atoi((const char*)strtok( e_args,","));
-
-		// ip addr
-		if ( 0 <= g_cliant_port [a_index] && 255 <= g_cliant_port [a_index] )
-		{
-			if ( 5 <= a_index )
-			{
-				return RESPONCE(RES_COMMAND_OK);
-			}
 			continue;
 		}
-		else
+
+		if ( ',' == *e_args )
 		{
-			return RESPONCE(RES_NOT_FILE);
+			if ( 0 != a_buf [0] )
+			{
+				if ( 0 == a_addr_get_done )
+				{
+					g_my_session_ptr->m_session_flags.m_cliant_addr [a_index] = atoi(a_buf);
+
+					memset(&a_buf , 0 , sizeof(a_buf));
+					a_buf_index = 0;
+					if ( 3 <= a_index )
+					{
+						a_addr_get_done = 1;
+					}
+					else
+					{
+						a_index++;
+					}
+				}
+				else
+				{
+					if ( a_port_high_done == 0 )
+					{
+						a_port_row = atoi(a_buf);
+
+						g_my_session_ptr->m_session_flags.m_cliant_port = ((a_port_high * 255) + a_port_row);
+						break;
+					}
+					else
+					{
+						a_port_high = atoi(a_buf);
+					}
+				}
+			}
 		}
 
+		a_buf [a_buf_index] = *e_args;
+		a_buf_index++;
+
+		a_timeout++;
+
+		if ( 300 == a_timeout )
+		{
+			return ERROR_RETURN;;
+		}
 	}
 
-	return ERROR_RETURN;
+	g_my_session_ptr->m_session_flags.m_port_req_flag = 1;
+
+	return NORMAL_RETURN;
 }
 
 int D_PASV(char* e_args)
 {
-	g_pasv_flags = PASV_ON;
-
-	return responcepsv(60001);
+	g_my_session_ptr->m_session_flags.m_pasv_flags = PASV_ON;
+	g_my_session_ptr->m_session_flags.m_port_req_flag = 1;
+	return NORMAL_RETURN;
 }
 
 int D_TYPE(char* e_args)
 {
 	if ( 0 == strcmp("A" , e_args) )
 	{
-		g_typemode = TYPE_ASCII;
+		g_my_session_ptr->m_session_flags.m_typemode_flag = TYPE_ASCII;
 		return RESPONCE(RES_COMMAND_OK_A);
 	}
 	else if ( 0 == strcmp("B" , e_args) )
 	{
-		g_typemode = TYPE_BINARY;
+		g_my_session_ptr->m_session_flags.m_typemode_flag = TYPE_BINARY;
 		return RESPONCE(RES_COMMAND_OK_B);
 	}
 	else
@@ -263,7 +317,6 @@ int D_RNFR(char* e_args)
 	if ( 0 == stat(a_temp_buf , a_dummy) )
 	{
 		// ファイルが存在する
-		memcpy(s_RNFR_dir , a_temp_buf , (sizeof(char) * 256));
 		return RESPONCE(RES_READY_RNFO);
 	}
 	else
@@ -275,10 +328,6 @@ int D_RNFR(char* e_args)
 
 int D_RNFO(char* e_args)
 {
-	if ( 0 == rename(s_RNFR_dir , e_args) )
-	{
-		return RESPONCE(RES_REQ_END);
-	}
 
 	return RESPONCE(RES_COMMAND_ARGS);
 }
@@ -466,4 +515,14 @@ static int responcepsv(int e_port)
 	char a_buf [256];
 	sprintf(a_buf,RES_PASV , 192 , 168 , 1 , 244 , e_port / 256 , (e_port - (e_port % 256)));
 	return RESPONCE(a_buf);
+}
+
+int Respsv(void)
+{
+	return responcepsv(g_my_session_ptr->m_port);
+}
+
+int Respsvfail(void)
+{
+	return RESPONCE(RES_COMMAND_ARGS);
 }

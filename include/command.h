@@ -41,6 +41,8 @@ extern int D_STAT(char* e_args);
 extern int D_HELP(char* e_args);
 extern int D_NOOP(char* e_args);
 extern int D_FEAT(char* e_args);
+extern int Respsv(void);
+extern int Respsvfail(void);
 #endif
 
 

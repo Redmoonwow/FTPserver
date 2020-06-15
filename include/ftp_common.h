@@ -14,7 +14,8 @@
 #define END_RETURN		-5
 
 #define PASV_ON		1
-#define PASV_OFF	0
+#define PASV_PORT	2
+#define PASV_NONE	0
 
 #define TYPE_BINARY 0
 #define TYPE_ASCII  1

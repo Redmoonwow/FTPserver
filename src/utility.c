@@ -225,7 +225,7 @@ int32_t OpenMQ(int32_t e_mq_name)
 {
 
 	struct mq_attr a_mq_attr;
-	trc("[%s: %d] OpenMQ START PID= %d" , __FILE__ , __LINE__ , getppid( ));
+	trc("[%s: %d] OpenMQ START" , __FILE__ , __LINE__);
 	memset(&a_mq_attr , 0 , sizeof(a_mq_attr));
 	a_mq_attr.mq_flags = 0;
 	a_mq_attr.mq_maxmsg = 30;
@@ -259,7 +259,8 @@ int32_t OpenMQ_CHILD(int32_t e_session_id,int e_child_type)
 {
 
 	struct mq_attr a_mq_attr;
-	trc("[%s: %d] OpenMQ START PID= %d" , __FILE__ , __LINE__ , getppid( ));
+
+	trc("[%s: %d] OpenMQ START" , __FILE__ , __LINE__ );
 	memset(&a_mq_attr , 0 , sizeof(a_mq_attr));
 	a_mq_attr.mq_flags = 0;
 	a_mq_attr.mq_maxmsg = 30;

@@ -3,21 +3,11 @@
 // @date 2020/06/21
 ///////////////////////////////////////////////////////////////////
 
-#include "headers.h"
 #include "cmd_thread.h"
 
-__thread struct timeval				g_wait_time;					// タイムアウト 500ms
-__thread fd_set						g_cliant_fd;					// クライアントディスクリプタ
-__thread int						g_QUIT_flags = 0;				// QUITフラグ
-__thread int						g_END_flags = 0;
-__thread int						g_pasv_flags = 0;
-__thread int						g_cliant_port [6] = { 0 };		// ip1 ip2 ip3 ip4 port1 port2
-__thread int						g_typemode = TYPE_BINARY;
-__thread int						g_abort_flag = 0;
 __thread int						g_cliantSock = 0;
 __thread st_session_data*			g_my_session_ptr;
-__thread fd_set						g_serv_fd;
-extern int									g_servSock;						//server socket descriptor
+extern int							g_servSock;						//server socket descriptor
 
 static int32_t InitCmdThread(int e_session_id);
 static int32_t Wait_ConnectFTP(void);
@@ -29,6 +19,7 @@ static int32_t RecvResQuitChild(char* e_message);
 static int32_t RecvResTransferChild(char* e_message);
 static int32_t RecvReqResetChild(char* e_message);
 static int32_t RecvReqEndSessionChild(char* e_message);
+static int32_t RecvResConnectPortChild(char* e_message);
 
 static st_function_msg_list s_function_list [] =
 {
@@ -39,6 +30,7 @@ static st_function_msg_list s_function_list [] =
 	{	FTP_MSG_RES_TRANSFER_CMD_CHILD		,RecvResTransferChild		},
 	{	FTP_MSG_REQ_RESET_CHILD				,RecvReqResetChild			},
 	{	FTP_MSG_REQ_END_ALL_SESSION_CHILD	,RecvReqEndSessionChild		},
+	{	FTP_MSG_RES_CONNECT_PORT_CHILD		,RecvResConnectPortChild	},
 	{	0xFFFF								,NULL						}
 };
 
@@ -57,7 +49,7 @@ void* Cmdthread(void* argv)
 	trc("[%s: %d][session: %d] command thread start" , __FILE__ , __LINE__,a_session_id);
 	InitCmdThread(a_session_id);
 
-	// epool用のfd生成
+	// epoll用のfd生成
 	static __thread struct epoll_event s_set_event;
 	memset(&s_set_event , 0 , sizeof(s_set_event));
 	s_set_event.events = EPOLLIN;
@@ -84,6 +76,17 @@ void* Cmdthread(void* argv)
 	   
 	while ( 1 )
 	{
+		// ポート接続要求判定
+		//------------------------------------------------------------------------------------------------------------
+		if ( 1 == g_my_session_ptr->m_session_flags.m_port_req_flag )
+		{
+			st_msg_res_connect_port_child a_port_req_msg;
+			memset(&a_port_req_msg , 0 , sizeof(a_port_req_msg));
+			a_port_req_msg.m_mq_header.m_commandcode = FTP_MSG_REQ_CONNECT_PORT_CHILD;
+
+			a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_port_req_msg , sizeof(a_port_req_msg));
+		}
+
 		// メッセージ受信
 		//------------------------------------------------------------------------------------------------------------
 		memset(&a_msg , 0 , sizeof(a_msg));
@@ -299,7 +302,7 @@ void* Cmdthread(void* argv)
 					//memcpy(( void*) a_message , (void*)"QUIT" , sizeof("QUIT"));
 				}
 
-				if ( 1 == g_QUIT_flags )
+				if ( 1 == g_my_session_ptr->m_session_flags.m_QUIT_flags )
 				{
 					st_msg_req_recvquit_child a_msg;
 					memset(&a_msg , 0 , sizeof(a_msg));
@@ -328,6 +331,10 @@ void* Cmdthread(void* argv)
  */
 int32_t InitCmdThread(int e_session_id)
 {
+
+	// NSマウント切り離し
+	unshare(CLONE_NEWNS);
+
 	g_my_session_ptr = SearchSession(e_session_id);
 	if ( NULL == g_my_session_ptr )
 	{
@@ -515,5 +522,21 @@ int32_t RecvReqEndSessionChild(char* e_message)
 	SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_msg , sizeof(a_msg));
 
 	return RESET_RETURN;
+}
+
+int32_t RecvResConnectPortChild(char* e_message)
+{
+	st_msg_res_connect_port_child* a_msg = (st_msg_res_connect_port_child*) e_message;
+	switch ( a_msg->m_result )
+	{
+		case RESULT_OK:
+			Respsv( );
+			break;
+		case RESULT_NG:
+		default:
+			Respsvfail( );
+			break;
+	}
+	return Respsvfail( );
 }
 

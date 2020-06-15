@@ -8,11 +8,14 @@
       "includePath": [
         "D:\\works\\headers\\lib\\gcc\\x86_64-redhat-linux\\4.8.2\\include\\**",
         "D:\\works\\headers\\include\\**",
+        "E:\\works\\81.linuxheader\\include",
+        "E:\\works\\81.linuxheader\\lib_include",
         "${workspaceRoot}\\include\\**"
       ],
       "defines": [
         "__LINUX",
-        "_DEBUG"
+        "_DEBUG",
+        "__USE_GNU"
       ],
       "intelliSenseMode": "linux-gcc-x64"
     }
