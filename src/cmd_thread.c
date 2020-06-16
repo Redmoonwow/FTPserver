@@ -16,10 +16,13 @@ static int32_t SepareteCommand(char* e_string , char* e_command , char* e_args);
 static int32_t RecvNtfStartIdle(char* e_message);
 static int32_t RecvResAcceptChild(char* e_message);
 static int32_t RecvResQuitChild(char* e_message);
-static int32_t RecvResTransferChild(char* e_message);
 static int32_t RecvReqResetChild(char* e_message);
 static int32_t RecvReqEndSessionChild(char* e_message);
+
+
+static int32_t RecvResTransferChild(char* e_message);
 static int32_t RecvResConnectPortChild(char* e_message);
+static int32_t RecvWakeDoneTrans(char* e_message);
 
 static st_function_msg_list s_function_list [] =
 {
@@ -27,10 +30,13 @@ static st_function_msg_list s_function_list [] =
 	{	FTP_MSG_NTF_START_IDLE_CHILD		,RecvNtfStartIdle			},
 	{	FTP_MSG_RES_ACCEPT_CHILD			,RecvResAcceptChild			},
 	{	FTP_MSG_RES_QUIT_CHILD				,RecvResQuitChild			},
-	{	FTP_MSG_RES_TRANSFER_CMD_CHILD		,RecvResTransferChild		},
 	{	FTP_MSG_REQ_RESET_CHILD				,RecvReqResetChild			},
 	{	FTP_MSG_REQ_END_ALL_SESSION_CHILD	,RecvReqEndSessionChild		},
+
+		//TRANS THREAD
+	{	FTP_MSG_NTF_WAKE_DONE_TRANS			,RecvWakeDoneTrans			},
 	{	FTP_MSG_RES_CONNECT_PORT_CHILD		,RecvResConnectPortChild	},
+	{	FTP_MSG_RES_TRANSFER_CMD_CHILD		,RecvResTransferChild		},
 	{	0xFFFF								,NULL						}
 };
 
@@ -347,14 +353,14 @@ int32_t InitCmdThread(int e_session_id)
 		return ERROR_RETURN;
 	}
 
-	st_msg_ntf_wake_done_child a_msg;
-	memset(&a_msg , 0 , sizeof(a_msg));
-	a_msg.m_mq_header.m_commandcode = FTP_MSG_NTF_WAKE_DONE_CHILD;
-	a_msg.m_result = RESULT_OK;
-
-	a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_msg , sizeof(a_msg));
+	pthread_attr_t a_attr;
+	pthread_attr_init(&a_attr);
+	pthread_attr_setdetachstate(&a_attr , PTHREAD_CREATE_DETACHED);
+	// コマンドスレッド起動
+	int a_return = pthread_create(&g_my_session_ptr->m_session_id , &a_attr , Cmdthread , (void*) & (g_my_session_ptr->m_session_id));
 	if ( ERROR_RETURN == a_return )
 	{
+		trc("[%s: %d] Create_Cmp error" , __FILE__ , __LINE__);
 		return ERROR_RETURN;
 	}
 
@@ -466,7 +472,7 @@ static int32_t SepareteCommand(char* e_string , char* e_command , char* e_args)
 	return NORMAL_RETURN;
 }
 
-int32_t RecvNtfStartIdle(char* e_message)
+static int32_t RecvNtfStartIdle(char* e_message)
 {
 	int a_return = listen(g_servSock , MAXQUEUE);
 
@@ -483,30 +489,28 @@ int32_t RecvNtfStartIdle(char* e_message)
 	return NORMAL_RETURN;
 }
 
-int32_t RecvResAcceptChild(char* e_message)
+static int32_t RecvResAcceptChild(char* e_message)
 {
 	return NORMAL_RETURN;
 }
-
-int32_t RecvResQuitChild(char* e_message)
+static int32_t RecvResQuitChild(char* e_message)
 {
 	trc("[%s: %d][session: %d]  call RecvResQuitChild" , __FILE__ , __LINE__,g_my_session_ptr->m_session_id);
 	g_my_session_ptr->m_child_cmd_state = CHILD_CMD_STATE_WAIT_END;
 	return END_RETURN;
 }
 
-int32_t RecvResTransferChild(char* e_message)
+static int32_t RecvResTransferChild(char* e_message)
 {
-	// つくってない！
 	return NORMAL_RETURN;
 }
 
-int32_t RecvReqResetChild(char* e_message)
+static int32_t RecvReqResetChild(char* e_message)
 {
 	return RESET_RETURN;
 }
 
-int32_t RecvReqEndSessionChild(char* e_message)
+static int32_t RecvReqEndSessionChild(char* e_message)
 {
 	int a_return = send(g_cliantSock , RES_ERROR , sizeof(RES_ERROR) , MSG_DONTWAIT);
 	if ( 0 == a_return )
@@ -524,7 +528,7 @@ int32_t RecvReqEndSessionChild(char* e_message)
 	return RESET_RETURN;
 }
 
-int32_t RecvResConnectPortChild(char* e_message)
+static int32_t RecvResConnectPortChild(char* e_message)
 {
 	st_msg_res_connect_port_child* a_msg = (st_msg_res_connect_port_child*) e_message;
 	switch ( a_msg->m_result )
@@ -538,5 +542,20 @@ int32_t RecvResConnectPortChild(char* e_message)
 			break;
 	}
 	return Respsvfail( );
+}
+
+static int32_t RecvWakeDoneTrans(char* e_message)
+{
+	st_msg_ntf_wake_done_child a_msg;
+	memset(&a_msg , 0 , sizeof(a_msg));
+	a_msg.m_mq_header.m_commandcode = FTP_MSG_NTF_WAKE_DONE_CHILD;
+	a_msg.m_result = RESULT_OK;
+
+	int a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_msg , sizeof(a_msg));
+	if ( ERROR_RETURN == a_return )
+	{
+		return ERROR_RETURN;
+	}
+	return NORMAL_RETURN;
 }
 

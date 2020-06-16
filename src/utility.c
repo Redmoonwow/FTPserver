@@ -5,16 +5,6 @@
 
 #include "utility.h"
 
-
-typedef struct st_thread_stack_ptr
-{
-	char*				m_stack_memory;			//8
-	char*				m_stack_memory_top;		//8
-	pid_t				m_tid;					//4
-	struct user_desc	m_tls_d;				//16
-	char				m_pad [4];				//4
-}st_thread_stack_ptr;
-
 static int Gettimeprintformat(char* e_time_ptr , int32_t e_ptr_datasize); // 現時刻取得
 
 static FILE*					s_trc_ptr;								// トレースログファイル
@@ -25,7 +15,13 @@ static uint8_t					s_Init_done = 0;
 static __thread	uint32_t		s_msg_ref;
 static __thread struct sigevent s_sigevt;
 static __thread mqd_t			s_my_mqdt = 0;
-static st_thread_stack_ptr		s_thread_list [SESSION_SUPPORT_MAX * 3]; // FILEIF TRANS CMD分
+
+typedef struct st_queue_header
+{
+	char* m_pre_ptr;
+	char* m_next_ptr;
+	char* m_data;
+}st_queue_body;
 
 /// ユーティリティAPI初期化
 int InitUtilitis(void)
@@ -38,7 +34,6 @@ int InitUtilitis(void)
 	localtime_r(&(a_now_time.tv_sec) , &a_localtime);
 
 	memset(s_trc_filename , 0 , sizeof(s_trc_filename));
-	memset(s_thread_list , 0 , (sizeof(st_thread_stack_ptr) * (SESSION_SUPPORT_MAX * 3)));
 	// トレースログ名作成
 	sprintf(s_trc_filename , "./trc_log/%s_%d_%d_NO:%d.log" , s_template_filename , a_localtime.tm_mon , a_localtime.tm_mday , s_template_file_no );
 
@@ -129,82 +124,6 @@ void trc(const char* e_string , ...)
 	fprintf(s_trc_ptr , "[%s] %s\n" , a_timeprintbuf , a_printbuf);
 
 	return;
-}
-
-/*
- * スレッドライブラリ
- *　pthreadライクなスレッド生成を行う // CMDスレッドなどはディレクトリFSを独自にもつひつようがあるため　
- *　
- */
-
-#define ___PTHREAD_DEFAULT (1024 * 96)
-pid_t Create_Cmp(int e_flag , void* (*e_start_routine) (void*) , void* e_arg)
-{
-	int a_index = 0;
-	int a_found = 0;
-	// 空いているスレッド情報リストを探す
-	for ( a_index = 0; a_index < (SESSION_SUPPORT_MAX * 3) ; a_index++)
-	{
-		if ( 0 == s_thread_list [a_index].m_tid )
-		{
-			a_found = 1;
-			break;
-		}
-	}
-
-	if ( 0 == a_found )
-	{
-		trc("[%s: %d] thread_list use full" , __FILE__ , __LINE__ );
-		return -1;
-	}
-
-	s_thread_list [a_index].m_stack_memory = malloc(___PTHREAD_DEFAULT);
-	if ( NULL == s_thread_list [a_index].m_stack_memory )
-	{
-		trc("[%s: %d] malloc error" , __FILE__ , __LINE__);
-	}
-	s_thread_list [a_index].m_stack_memory_top = s_thread_list [a_index].m_stack_memory + ___PTHREAD_DEFAULT;
-
-	s_thread_list [a_index].m_tid = clone((int(*)(void*))e_start_routine ,s_thread_list [a_index].m_stack_memory_top ,
-										    e_flag | CLONE_SIGHAND | CLONE_VM | CLONE_THREAD | CLONE_SYSVSEM  | CLONE_PARENT | CLONE_SETTLS,
-										   (e_arg),&s_thread_list [a_index].m_tls_d);
-
-	if ( 0 == s_thread_list [a_index].m_tid )
-	{
-		trc("[%s: %d] thread create fail" , __FILE__ , __LINE__);
-		s_thread_list [a_index].m_tid = 0;
-		free(s_thread_list [a_index].m_stack_memory);
-		s_thread_list [a_index].m_stack_memory_top = 0;
-		return -1;
-	}
-	return s_thread_list [a_index].m_tid;
-}
-
-int CloseCmp(pid_t e_tid)
-{
-	int a_index = 0;
-	int a_found = 0;
-	// 空いているスレッド情報リストを探す
-	for ( a_index = 0; a_index < (SESSION_SUPPORT_MAX * 3); a_index++ )
-	{
-		if ( e_tid == s_thread_list [a_index].m_tid )
-		{
-			a_found = 1;
-			break;
-		}
-	}
-
-	if ( 0 == a_found )
-	{
-		trc("[%s: %d] thread_list not found" , __FILE__ , __LINE__);
-		return ERROR_RETURN;
-	}
-
-	s_thread_list [a_index].m_tid = 0;
-	free(s_thread_list [a_index].m_stack_memory);
-	s_thread_list [a_index].m_stack_memory_top = 0;
-
-	return NORMAL_RETURN;
 }
 
 /*
@@ -485,3 +404,212 @@ int32_t RecvMQtimeout(int e_src_mq_id , void* e_recv_msg , int32_t e_msg_size,in
 	}
 	return NORMAL_RETURN;
 }
+
+// キューAPI
+
+#define IS_FULL 0xF0000001
+#define IS_EMPTY 0xF0000002
+#define IS_NONE	0xF0000003
+
+st_queue* QUEUE_init(uint32_t e_size , int e_size_unit , uint32_t e_create_number)
+{
+	st_queue* a_queue_ptr = NULL;
+	st_queue_body* a_queue_body_ptr = NULL;
+	st_queue_body* a_queue_body_next_ptr = NULL;
+	uint64_t a_create_num = 0;
+
+	switch ( e_size_unit )
+	{
+		case BYTE_B:
+			a_create_num = 1;
+			break;
+		case BYTE_KB:
+			a_create_num = 1 * 1000;
+			break;
+		case BYTE_MB:
+			a_create_num = 1 * 1000 * 1000;
+			
+		default:
+			trc("[%s: %d] QUEUE create num unknown" , __FILE__ , __LINE__);
+			return NULL;
+	}
+
+	a_queue_ptr = (st_queue*)malloc(sizeof(st_queue));
+	if ( NULL == a_queue_ptr )
+	{
+		trc("[%s: %d] malloc error" , __FILE__ , __LINE__);
+		return NULL;
+	}
+
+	memset(a_queue_ptr , 0 , sizeof(st_queue));
+
+	// 最初だけ単体で取得する
+	a_queue_body_ptr = (st_queue_body*) malloc(sizeof(st_queue_body));
+	if ( NULL == a_queue_ptr )
+	{
+		free(a_queue_ptr);
+		trc("[%s: %d] malloc error" , __FILE__ , __LINE__);
+		return NULL;
+	}
+	memset(a_queue_body_ptr , 0 , sizeof(st_queue_body));
+	a_queue_body_ptr->m_pre_ptr = NULL;
+
+	a_queue_body_ptr->m_data = malloc(e_size * a_create_num);
+	if ( NULL == a_queue_ptr )
+	{
+		free(a_queue_ptr);
+		trc("[%s: %d] malloc error" , __FILE__ , __LINE__);
+		return NULL;
+	}
+	memset(a_queue_body_ptr->m_data , 0 , sizeof(e_size * a_create_num));
+
+	a_queue_ptr->m_empty_top_ptr = a_queue_body_ptr;
+
+	int a_index;
+	for ( a_index = 0 ; a_index >= e_create_number - 2 ;a_index++)
+	{
+		// 次のキュー管理データを生成
+		a_queue_body_next_ptr = (st_queue_body*) malloc(sizeof(st_queue_body));
+		if ( NULL == a_queue_ptr )
+		{
+			free(a_queue_ptr);
+			trc("[%s: %d] malloc error" , __FILE__ , __LINE__);
+			return NULL;
+		}
+
+		memset(a_queue_body_next_ptr , 0 , sizeof(st_queue_body));
+
+		// キューデータを生成
+		a_queue_body_next_ptr->m_data = (char*)malloc(e_size * a_create_num);
+		if ( NULL == a_queue_ptr )
+		{
+			free(a_queue_ptr);
+			trc("[%s: %d] malloc error" , __FILE__ , __LINE__);
+			return NULL;
+		}
+		memset(a_queue_body_next_ptr->m_data , 0 , sizeof(e_size * a_create_num));
+
+		// 前のキュー管理に次のポインタアドレスを代入
+		a_queue_body_ptr->m_next_ptr = a_queue_body_next_ptr;
+
+		// 次のキュー管理に前のポインタアドレスを代入
+		a_queue_body_next_ptr->m_pre_ptr = a_queue_body_ptr;
+
+		// 次のキュー管理を保持
+		a_queue_body_ptr = NULL;
+		a_queue_body_ptr = a_queue_body_next_ptr;
+		a_queue_body_next_ptr = NULL;
+
+	}
+
+	a_queue_body_ptr->m_next_ptr = NULL;
+	a_queue_ptr->m_empty_tail_ptr = a_queue_body_ptr;
+	a_queue_ptr->m_data_size = (e_size * a_create_num);
+
+	return a_queue_ptr;
+}
+
+uint32_t QUEUE_push(st_queue* e_queue , void* e_data)
+{
+	st_queue_body* a_insert_data_ptr = NULL;
+	st_queue_body* a_insert_data_temp_ptr = NULL;
+	uint64_t a_size = e_queue->m_data_size;
+
+	// 空きキューがあるか確認
+	if ( NULL == e_queue->m_empty_top_ptr )
+	{
+		return IS_FULL;
+	}
+
+	// データを切り離す
+	a_insert_data_ptr = e_queue->m_empty_top_ptr;
+	a_insert_data_temp_ptr = a_insert_data_ptr->m_next_ptr;
+
+	a_insert_data_ptr->m_next_ptr = NULL;
+	a_insert_data_temp_ptr->m_pre_ptr = NULL;
+
+	// データを挿入
+	memcpy(a_insert_data_ptr->m_data , e_data , sizeof(a_size));
+
+	// データの連結
+
+	// 一つも使用済みがない
+	if ( NULL == e_queue->m_top_ptr )
+	{
+		e_queue->m_top_ptr = a_insert_data_ptr;
+	}
+	else
+	{
+		a_insert_data_temp_ptr = e_queue->m_top_ptr;
+
+		while ( NULL == a_insert_data_temp_ptr->m_next_ptr )
+		{
+			a_insert_data_temp_ptr = a_insert_data_temp_ptr->m_next_ptr;
+		}
+
+		a_insert_data_temp_ptr->m_next_ptr = a_insert_data_ptr;
+
+		a_insert_data_ptr->m_pre_ptr = a_insert_data_temp_ptr;
+	}
+
+	return NORMAL_RETURN;
+}
+
+int32_t QUEUE_pop(st_queue* e_queue , char** e_data_ptr)
+{
+	st_queue_body* a_data_ptr = NULL;
+	st_queue_body* a_data_temp_ptr = NULL;
+
+	uint64_t a_size = e_queue->m_data_size;
+
+	// 使用キューがあるか確認
+	if ( NULL == e_queue->m_top_ptr )
+	{
+		return NULL;
+	}
+
+	// データをコピー
+	a_data_ptr = e_queue->m_top_ptr;
+	a_data_temp_ptr = a_data_ptr->m_next_ptr;
+	memcpy(*e_data_ptr , a_data_ptr->m_data , sizeof(e_queue->m_data_size));
+
+	// 使用済先頭ポインタを切り離す
+	e_queue->m_top_ptr = NULL;
+	e_queue->m_top_ptr = a_data_temp_ptr;
+	a_data_temp_ptr->m_pre_ptr = NULL;
+
+	// 未使用ポインタの最後尾に連結
+	memset(a_data_ptr , 0 , sizeof(st_queue_body));
+	a_data_temp_ptr = e_queue->m_empty_tail_ptr;
+	a_data_temp_ptr->m_next_ptr = a_data_ptr;
+	a_data_ptr->m_pre_ptr = a_data_temp_ptr;
+	e_queue->m_empty_tail_ptr = a_data_ptr;
+
+	return NORMAL_RETURN;
+}
+
+int32_t QUEUE_isEmpty(st_queue* e_queue)
+{
+	if ( NULL == e_queue->m_top_ptr &&
+		NULL == e_queue->m_tail_ptr )
+	{
+		return IS_EMPTY;
+	}
+	return IS_NONE;
+}
+
+int32_t QUEUE_isFull(st_queue* e_queue)
+{
+	if ( NULL == e_queue->m_empty_top_ptr &&
+		NULL == e_queue->m_empty_tail_ptr )
+	{
+		return IS_FULL;
+	}
+	return IS_NONE;
+}
+
+int32_t QUEUE_isAvailable(st_queue* e_queue)
+{
+	return QUEUE_isFull(e_queue);
+}
+

@@ -26,9 +26,6 @@ extern void trc(const char* e_string , ...);
 extern int InitUtilitis(void);
 extern int CloseUtilities(void);
 
-extern pid_t Create_Cmp(int e_flag , void* (*e_start_routine) (void*) , void* e_arg);
-extern int CloseCmp(pid_t e_tid);
-
 extern int32_t OpenMQ(int32_t e_mq_name);
 extern int32_t CloseMQ(int e_src_mq_id , int e_session_id , int e_thread_type);
 extern int32_t SendMQ(int e_dst_mq_id , int e_src_mq_id , void* e_send_msg , int32_t e_msg_size);
@@ -38,5 +35,27 @@ extern int32_t RefMQ(void);
 
 extern int32_t OpenMQ_CHILD(int32_t e_session_id , int e_child_type);
 extern int32_t SendMQ_CHILD(int e_dst_mq_id , int e_session_id , int e_child_type , void* e_send_msg , int32_t e_msg_size);
+
+//queue
+
+typedef struct st_queue_header
+{
+	char* m_top_ptr;
+	char* m_tail_ptr;
+	char* m_empty_top_ptr;
+	char* m_empty_tail_ptr;
+	uint64_t m_data_size;
+}st_queue;
+
+#define BYTE_B 1
+#define BYTE_KB 2
+#define BYTE_MB 3
+
+extern st_queue* QUEUE_init(uint32_t e_size , int e_size_unit , uint32_t e_create_number);
+extern uint32_t QUEUE_push(st_queue* e_queue , void* e_data;
+extern char* QUEUE_pop(st_queue* e_queue);
+extern int32_t QUEUE_isEmpty(st_queue* e_queue);
+extern int32_t QUEUE_isFull(st_queue* e_queue);
+extern int32_t QUEUE_isAvailable(st_queue* e_queue);
 
 #endif

@@ -16,13 +16,15 @@ static __thread int					s_data_cliant_sock = 0;
 static __thread struct sockaddr_in	s_dataSockAddr;				//data internet socket address
 
 static int32_t ReqConnectPort(char* e_message);
-static int32_t NtfWakeDoneFileif(char e_message);
+static int32_t NtfWakeDoneFileif(char* e_message);
+static int32_t NtfStartIdleTrans(char* e_message);
 
 static st_function_msg_list s_function_list [] =
 {
 		//	COMMAND						,FUNC
 	{	FTP_MSG_RES_CONNECT_PORT_CHILD		,ReqConnectPort				},
 	{	FTP_MSG_NTF_WAKE_DONE_FILEIF		,NtfWakeDoneFileif			},
+	{	FTP_MSG_NTF_START_IDLE_TRANS		,NtfStartIdleTrans			},
 	{	0xFFFF								,NULL						}
 };
 
@@ -87,7 +89,7 @@ void* TransThread(void* argv)
 						memset(&a_send_msg , 0 , sizeof(a_send_msg));
 						a_send_msg.m_mq_header.m_commandcode = FTP_MSG_NTF_FINISH_CHILD;
 
-						a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_TRANS , &a_send_msg , sizeof(a_send_msg));
+						a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_send_msg , sizeof(a_send_msg));
 						return NULL;
 					}
 					// リセットの場合、同じセッションでスレッドを再立ち上げしているので終了通知を送らない
@@ -152,7 +154,7 @@ void* TransThread(void* argv)
 					memset(&a_port_res_msg , 0 , sizeof(a_port_res_msg));
 					a_port_res_msg.m_mq_header.m_commandcode = FTP_MSG_RES_CONNECT_PORT_CHILD;
 					a_port_res_msg.m_result = RESULT_NG;
-					a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_TRANS , &a_port_res_msg , sizeof(a_port_res_msg));
+					a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_port_res_msg , sizeof(a_port_res_msg));
 					g_my_session_ptr->m_Trans_cmd_state = CHILD_TRANS_STATE_WAIT_MSG;
 					continue;
 				}
@@ -165,7 +167,7 @@ void* TransThread(void* argv)
 					memset(&a_port_res_msg , 0 , sizeof(a_port_res_msg));
 					a_port_res_msg.m_mq_header.m_commandcode = FTP_MSG_RES_CONNECT_PORT_CHILD;
 					a_port_res_msg.m_result = RESULT_NG;
-					a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_TRANS , &a_port_res_msg , sizeof(a_port_res_msg));
+					a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_port_res_msg , sizeof(a_port_res_msg));
 					g_my_session_ptr->m_Trans_cmd_state = CHILD_TRANS_STATE_WAIT_MSG;
 					continue;
 				}
@@ -181,7 +183,7 @@ void* TransThread(void* argv)
 					memset(&a_port_res_msg , 0 , sizeof(a_port_res_msg));
 					a_port_res_msg.m_mq_header.m_commandcode = FTP_MSG_RES_CONNECT_PORT_CHILD;
 					a_port_res_msg.m_result = RESULT_NG;
-					a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_TRANS , &a_port_res_msg , sizeof(a_port_res_msg));
+					a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_port_res_msg , sizeof(a_port_res_msg));
 					g_my_session_ptr->m_Trans_cmd_state = CHILD_TRANS_STATE_WAIT_MSG;
 					continue;
 				}
@@ -193,7 +195,7 @@ void* TransThread(void* argv)
 					memset(&a_port_res_msg , 0 , sizeof(a_port_res_msg));
 					a_port_res_msg.m_mq_header.m_commandcode	= FTP_MSG_RES_CONNECT_PORT_CHILD;
 					a_port_res_msg.m_result						= RESULT_NG;
-					a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_TRANS , &a_port_res_msg , sizeof(a_port_res_msg));
+					a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_port_res_msg , sizeof(a_port_res_msg));
 					g_my_session_ptr->m_Trans_cmd_state			= CHILD_TRANS_STATE_WAIT_MSG;
 					continue;
 				}
@@ -203,7 +205,7 @@ void* TransThread(void* argv)
 					memset(&a_port_res_msg , 0 , sizeof(a_port_res_msg));
 					a_port_res_msg.m_mq_header.m_commandcode = FTP_MSG_RES_CONNECT_PORT_CHILD;
 					a_port_res_msg.m_result = RESULT_NG;
-					a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_TRANS , &a_port_res_msg , sizeof(a_port_res_msg));
+					a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_port_res_msg , sizeof(a_port_res_msg));
 					g_my_session_ptr->m_Trans_cmd_state = CHILD_TRANS_STATE_WAIT_MSG;
 					continue;
 				}
@@ -224,23 +226,27 @@ void* TransThread(void* argv)
 					memset(&a_port_res_msg , 0 , sizeof(a_port_res_msg));
 					a_port_res_msg.m_mq_header.m_commandcode = FTP_MSG_RES_CONNECT_PORT_CHILD;
 					a_port_res_msg.m_result = RESULT_NG;
-					a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_TRANS , &a_port_res_msg , sizeof(a_port_res_msg));
+					a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_port_res_msg , sizeof(a_port_res_msg));
 					g_my_session_ptr->m_Trans_cmd_state = CHILD_TRANS_STATE_WAIT_MSG;
 					return NULL;
 				}
 
-				a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_TRANS , &a_port_res_msg , sizeof(a_port_res_msg));
+				a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_port_res_msg , sizeof(a_port_res_msg));
 				if (ERROR_RETURN == a_return )
 				{
 					st_msg_res_connect_port_child a_port_res_msg;
 					memset(&a_port_res_msg , 0 , sizeof(a_port_res_msg));
 					a_port_res_msg.m_mq_header.m_commandcode = FTP_MSG_RES_CONNECT_PORT_CHILD;
 					a_port_res_msg.m_result = RESULT_NG;
-					a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_TRANS , &a_port_res_msg , sizeof(a_port_res_msg));
+					a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_port_res_msg , sizeof(a_port_res_msg));
 					g_my_session_ptr->m_Trans_cmd_state = CHILD_TRANS_STATE_WAIT_MSG;
 					return NULL;
 				}
 
+				g_my_session_ptr->m_Trans_cmd_state = CHILD_TRANS_STATE_WAIT_MSG;
+				break;
+
+				case CHILD_TRANS_STATE_CHECK_CMD:
 				switch ( g_my_session_ptr->m_session_command )
 				{ 
 					case CMD_STOR:
@@ -252,6 +258,7 @@ void* TransThread(void* argv)
 					case CMD_LIST:
 						g_my_session_ptr->m_Trans_cmd_state = CHILD_TRANS_STATE_WAIT_PUSH;
 				}
+				break;
 
 			case CHILD_TRANS_STATE_WAIT_END:
 				close(s_epoll_cliant_fd);
@@ -297,20 +304,31 @@ static int32_t InitTransThread(int e_session_id)
 	return NORMAL_RETURN;
 }
 
-int32_t ReqConnectPort(char* e_message)
+static int32_t ReqConnectPort(char* e_message)
 {
 	g_my_session_ptr->m_Trans_cmd_state = CHILD_TRANS_STATE_CONNECT;
 	return NORMAL_RETURN;
 }
 
-int32_t NtfWakeDoneFileif(char e_message)
+static int32_t NtfWakeDoneFileif(char* e_message)
 {
 	st_msg_ntf_wake_done_trans a_msg;
 	memset(&a_msg , 0 , sizeof(a_msg));
 	a_msg.m_mq_header.m_commandcode = FTP_MSG_NTF_WAKE_DONE_TRANS;
 	a_msg.m_result = RESULT_OK;
 
-	int a_return = SendMQ_CHILD(CMP_NO_CHILD , g_my_session_ptr->m_session_id , CHILD_TRANS , &a_msg , sizeof(a_msg));
+	int a_return = SendMQ_CHILD(CMP_NO_CHILD , g_my_session_ptr->m_session_id , CHILD_CMD , &a_msg , sizeof(a_msg));
 
 	return a_return;
+}
+
+static int32_t NtfStartIdleTrans(char* e_message)
+{
+	st_msg_ntf_start_idle_fileif a_msg;
+	memset(&a_msg , 0 , sizeof(a_msg));
+	a_msg.m_mq_header.m_commandcode = FTP_MSG_NTF_START_IDLE_FILEIF;
+
+	int a_return = SendMQ_CHILD(CMP_NO_CHILD , g_my_session_ptr->m_session_id , CHILD_FILEIF , &a_msg , sizeof(a_msg));
+
+	return NORMAL_RETURN;
 }
