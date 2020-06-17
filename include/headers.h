@@ -7,6 +7,7 @@
 #ifndef __HEADERS_HPP_
 #define __HEADERS_HPP_
 #define _GNU_SOURCE 
+#define _XOPEN_SOURCE 500
 #include <stdint.h>
 #include <time.h>
 #include <stdarg.h>
@@ -30,6 +31,7 @@
 #include <sched.h>
 #include <asm/ldt.h>
 #include <sys/types.h>
+#include <ftw.h>
 
 #include "utility.h"
 #include "config.h"

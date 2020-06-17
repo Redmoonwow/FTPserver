@@ -7,8 +7,10 @@
 #include "fileif_thread.h"
 
 extern __thread st_session_data* g_my_session_ptr;
+static __thread char* s_data_buf;
 
 static int32_t InitFileifThread(int e_session_id);
+static int32_t CreateList(char* e_data_ptr);
 
 static int32_t NtfStartIdleFileif(char* e_message);
 static int32_t RecvRead(char* e_message);
@@ -129,7 +131,36 @@ static int32_t InitFileifThread(int e_session_id)
 	{
 		return ERROR_RETURN;
 	}
+
+	s_data_buf = malloc(1 * 1000 * 1000);
+	if ( NULL == s_data_buf )
+	{
+		return ERROR_RETURN;
+	}
+
 	return NORMAL_RETURN;
+}
+
+#define NOT_END_LIST
+#define END_LIST
+
+static int32_t CreateList(char* e_data_ptr)
+{
+	char a_path [PATH_MAX];
+	memset(a_path , 0 , sizeof(char));
+	realpath(g_my_session_ptr->m_use_filepath , a_path);
+	nftw(a_path , CreateBlock , 1 , FTW_ACTIONRETVAL);
+
+	return NORMAL_RETURN;
+}
+
+int CreateBlock(const char* e_filename , const struct stat* e_status , int e_flag , struct FTW* e_info)
+{
+	static s_data_len = 0;
+	char a_temp_buf [PATH_MAX];
+
+
+
 }
 
 static int32_t NtfStartIdleFileif(char*  e_message)
