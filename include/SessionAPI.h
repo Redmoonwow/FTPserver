@@ -31,14 +31,22 @@ typedef enum
 	CHILD_TRANS_STATE_CHECK_CMD,
 	CHILD_TRANS_STATE_TRANSING,
 	CHILD_TRANS_STATE_RECVING,
-	CHILD_TRANS_STATE_WAIT_END
+	CHILD_TRANS_STATE_WAIT_END,
+
+	CHILD_FILEIF_STATE_WAIT_MSG = 0x2000,
+	CHILD_FILEIF_STATE_TRANSING_LIST,
+	CHILD_FILEIF_STATE_TRANSING_NLIST,
+	CHILD_FILEIF_STATE_TRANSING,
+	CHILD_FILEIF_STATE_RECIVING,
+	CHILD_FILEIF_STATE_WAIT_END,
 }en_childstate;
 
 #if 1 // 202006012 cloneä÷êîÇ≈threadê∂ê¨Ç…ïœçX
 typedef struct st_session_data
 {
 	en_childstate	m_child_cmd_state;
-	en_childstate	m_Trans_cmd_state;
+	en_childstate	m_Trans_state;
+	en_childstate	m_Fileif_state;
 	int32_t			m_session_id;
 	char			m_use_filepath [PATH_MAX];
 	int32_t			m_session_command;
@@ -46,6 +54,7 @@ typedef struct st_session_data
 	pthread_t		m_command_thread_id;
 	pthread_t		m_trans_thread_id;
 	pthread_t		m_fileif_thread_id;
+	st_queue*		m_data_queue;
 	struct st_session_flags
 	{
 		int				m_QUIT_flags;					// QUITÉtÉâÉO
@@ -64,7 +73,7 @@ typedef struct st_session_data
 typedef struct st_session_data
 {
 	en_childstate	m_child_cmd_state;
-	en_childstate	m_Trans_cmd_state;
+	en_childstate	m_Trans_state;
 	int32_t			m_session_id;
 	char			m_use_filepath [PATH_MAX];
 	int32_t			m_session_command;

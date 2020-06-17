@@ -14,6 +14,7 @@ static int32_t InitTransThread(int e_session_id);
 static __thread int					s_data_sock = 0;
 static __thread int					s_data_cliant_sock = 0;
 static __thread struct sockaddr_in	s_dataSockAddr;				//data internet socket address
+static __thread int					s_socket_done = 0;
 
 static int32_t ReqConnectPort(char* e_message);
 static int32_t NtfWakeDoneFileif(char* e_message);
@@ -118,13 +119,24 @@ void* TransThread(void* argv)
 		memset(&a_event , 0 , sizeof(a_event));
 
 
-		switch ( g_my_session_ptr->m_Trans_cmd_state )
+		switch ( g_my_session_ptr->m_Trans_state )
 		{
 			case CHILD_TRANS_STATE_WAIT_MSG:
 				nanosleep(&a_sleep , NULL);
 				continue;
 
 			case CHILD_TRANS_STATE_CONNECT:
+
+				if ( 1 == s_socket_done )
+				{
+					close(s_epoll_cliant_fd);
+					close(a_epoll_serv_fd);
+					shutdown(s_data_cliant_sock , SHUT_RDWR);
+					close(s_data_sock);
+					close(s_data_cliant_sock);
+
+					s_socket_done = 0;
+				}
 
 				// TCPソケット生成
 				s_data_sock = socket(AF_INET , SOCK_STREAM , 0);
@@ -155,7 +167,7 @@ void* TransThread(void* argv)
 					a_port_res_msg.m_mq_header.m_commandcode = FTP_MSG_RES_CONNECT_PORT_CHILD;
 					a_port_res_msg.m_result = RESULT_NG;
 					a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_port_res_msg , sizeof(a_port_res_msg));
-					g_my_session_ptr->m_Trans_cmd_state = CHILD_TRANS_STATE_WAIT_MSG;
+					g_my_session_ptr->m_Trans_state = CHILD_TRANS_STATE_WAIT_MSG;
 					continue;
 				}
 
@@ -168,7 +180,7 @@ void* TransThread(void* argv)
 					a_port_res_msg.m_mq_header.m_commandcode = FTP_MSG_RES_CONNECT_PORT_CHILD;
 					a_port_res_msg.m_result = RESULT_NG;
 					a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_port_res_msg , sizeof(a_port_res_msg));
-					g_my_session_ptr->m_Trans_cmd_state = CHILD_TRANS_STATE_WAIT_MSG;
+					g_my_session_ptr->m_Trans_state = CHILD_TRANS_STATE_WAIT_MSG;
 					continue;
 				}
 
@@ -184,7 +196,7 @@ void* TransThread(void* argv)
 					a_port_res_msg.m_mq_header.m_commandcode = FTP_MSG_RES_CONNECT_PORT_CHILD;
 					a_port_res_msg.m_result = RESULT_NG;
 					a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_port_res_msg , sizeof(a_port_res_msg));
-					g_my_session_ptr->m_Trans_cmd_state = CHILD_TRANS_STATE_WAIT_MSG;
+					g_my_session_ptr->m_Trans_state = CHILD_TRANS_STATE_WAIT_MSG;
 					continue;
 				}
 
@@ -196,7 +208,7 @@ void* TransThread(void* argv)
 					a_port_res_msg.m_mq_header.m_commandcode	= FTP_MSG_RES_CONNECT_PORT_CHILD;
 					a_port_res_msg.m_result						= RESULT_NG;
 					a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_port_res_msg , sizeof(a_port_res_msg));
-					g_my_session_ptr->m_Trans_cmd_state			= CHILD_TRANS_STATE_WAIT_MSG;
+					g_my_session_ptr->m_Trans_state			= CHILD_TRANS_STATE_WAIT_MSG;
 					continue;
 				}
 				else if ( 0 > a_return )
@@ -206,7 +218,7 @@ void* TransThread(void* argv)
 					a_port_res_msg.m_mq_header.m_commandcode = FTP_MSG_RES_CONNECT_PORT_CHILD;
 					a_port_res_msg.m_result = RESULT_NG;
 					a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_port_res_msg , sizeof(a_port_res_msg));
-					g_my_session_ptr->m_Trans_cmd_state = CHILD_TRANS_STATE_WAIT_MSG;
+					g_my_session_ptr->m_Trans_state = CHILD_TRANS_STATE_WAIT_MSG;
 					continue;
 				}
 
@@ -227,7 +239,7 @@ void* TransThread(void* argv)
 					a_port_res_msg.m_mq_header.m_commandcode = FTP_MSG_RES_CONNECT_PORT_CHILD;
 					a_port_res_msg.m_result = RESULT_NG;
 					a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_port_res_msg , sizeof(a_port_res_msg));
-					g_my_session_ptr->m_Trans_cmd_state = CHILD_TRANS_STATE_WAIT_MSG;
+					g_my_session_ptr->m_Trans_state = CHILD_TRANS_STATE_WAIT_MSG;
 					return NULL;
 				}
 
@@ -239,24 +251,24 @@ void* TransThread(void* argv)
 					a_port_res_msg.m_mq_header.m_commandcode = FTP_MSG_RES_CONNECT_PORT_CHILD;
 					a_port_res_msg.m_result = RESULT_NG;
 					a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_port_res_msg , sizeof(a_port_res_msg));
-					g_my_session_ptr->m_Trans_cmd_state = CHILD_TRANS_STATE_WAIT_MSG;
+					g_my_session_ptr->m_Trans_state = CHILD_TRANS_STATE_WAIT_MSG;
 					return NULL;
 				}
 
-				g_my_session_ptr->m_Trans_cmd_state = CHILD_TRANS_STATE_WAIT_MSG;
+				g_my_session_ptr->m_Trans_state = CHILD_TRANS_STATE_WAIT_MSG;
 				break;
 
 				case CHILD_TRANS_STATE_CHECK_CMD:
 				switch ( g_my_session_ptr->m_session_command )
 				{ 
 					case CMD_STOR:
-						g_my_session_ptr->m_Trans_cmd_state = CHILD_TRANS_STATE_RECVING;
+						g_my_session_ptr->m_Trans_state = CHILD_TRANS_STATE_RECVING;
 					case CMD_RETR:
-						g_my_session_ptr->m_Trans_cmd_state = CHILD_TRANS_STATE_WAIT_PUSH;
+						g_my_session_ptr->m_Trans_state = CHILD_TRANS_STATE_WAIT_PUSH;
 					case CMD_NLIST:
-						g_my_session_ptr->m_Trans_cmd_state = CHILD_TRANS_STATE_WAIT_PUSH;
+						g_my_session_ptr->m_Trans_state = CHILD_TRANS_STATE_WAIT_PUSH;
 					case CMD_LIST:
-						g_my_session_ptr->m_Trans_cmd_state = CHILD_TRANS_STATE_WAIT_PUSH;
+						g_my_session_ptr->m_Trans_state = CHILD_TRANS_STATE_WAIT_PUSH;
 				}
 				break;
 
@@ -276,14 +288,15 @@ void* TransThread(void* argv)
 
 static int32_t InitTransThread(int e_session_id)
 {
-	g_my_session_ptr = SearchSession(e_session_id);
-	if ( NULL == g_my_session_ptr )
+	int32_t a_return = OpenMQ_CHILD(g_my_session_ptr->m_session_id , CHILD_TRANS);
+	if ( ERROR_RETURN == a_return )
 	{
 		return ERROR_RETURN;
 	}
 
-	int32_t a_return = OpenMQ_CHILD(g_my_session_ptr->m_session_id , CHILD_TRANS);
-	if ( ERROR_RETURN == a_return )
+	g_my_session_ptr->m_data_queue = QUEUE_init(1 , BYTE_MB , 8);
+
+	if ( NULL == g_my_session_ptr->m_data_queue )
 	{
 		return ERROR_RETURN;
 	}
@@ -306,7 +319,7 @@ static int32_t InitTransThread(int e_session_id)
 
 static int32_t ReqConnectPort(char* e_message)
 {
-	g_my_session_ptr->m_Trans_cmd_state = CHILD_TRANS_STATE_CONNECT;
+	g_my_session_ptr->m_Trans_state = CHILD_TRANS_STATE_CONNECT;
 	return NORMAL_RETURN;
 }
 

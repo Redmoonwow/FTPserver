@@ -53,9 +53,10 @@ typedef struct st_queue_header
 
 extern st_queue* QUEUE_init(uint32_t e_size , int e_size_unit , uint32_t e_create_number);
 extern uint32_t QUEUE_push(st_queue* e_queue , void* e_data;
-extern char* QUEUE_pop(st_queue* e_queue);
+extern int32_t QUEUE_pop(st_queue* e_queue , char** e_data_ptr)
 extern int32_t QUEUE_isEmpty(st_queue* e_queue);
 extern int32_t QUEUE_isFull(st_queue* e_queue);
 extern int32_t QUEUE_isAvailable(st_queue* e_queue);
+extern int32_t QUEUE_destroy(st_queue* e_queue);
 
 #endif

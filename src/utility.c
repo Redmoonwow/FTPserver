@@ -613,3 +613,46 @@ int32_t QUEUE_isAvailable(st_queue* e_queue)
 	return QUEUE_isFull(e_queue);
 }
 
+int32_t QUEUE_destroy(st_queue* e_queue)
+{
+	st_queue_body* a_queue_body_pre_ptr = NULL;
+	st_queue_body* a_queue_body_ptr = NULL;
+
+	// 使用済みバッファが空でないなら先に開放する
+	if ( NULL != e_queue->m_top_ptr )
+	{
+		a_queue_body_ptr = e_queue->m_top_ptr;
+		
+		while ( 1 )
+		{
+			free(a_queue_body_ptr->m_data);
+
+			if ( NULL == a_queue_body_ptr->m_next_ptr )
+			{
+				break;
+			}
+			a_queue_body_ptr = a_queue_body_ptr->m_next_ptr;
+			free(a_queue_body_ptr->m_pre_ptr);
+		}
+	}
+
+	if ( NULL != e_queue->m_empty_top_ptr )
+	{
+		a_queue_body_ptr = e_queue->m_empty_top_ptr;
+
+		while ( 1 )
+		{
+			free(a_queue_body_ptr->m_data);
+
+			if ( NULL == a_queue_body_ptr->m_next_ptr )
+			{
+				break;
+			}
+			a_queue_body_ptr = a_queue_body_ptr->m_next_ptr;
+			free(a_queue_body_ptr->m_pre_ptr);
+		}
+	}
+
+	return NORMAL_RETURN;
+}
+
