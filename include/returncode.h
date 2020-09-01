@@ -9,10 +9,16 @@
 #define RES_REST						"110 Restart marker reply.\r\n" 
 // サービスは停止しているが、nnn分後に準備できる
 #define RES_NOTSERVICE					"120 Service ready in %d minutes.\r\n"
-//データコネクションはすでに確立されている。このコネクションで転送を開始する
+// データコネクションはすでに確立されている。このコネクションで転送を開始する
 #define RES_ALREADY_DATA_CONNET			"125 Data connection already open; transfer starting.\r\n" 
 // ファイルステータスは正常である。データコネクションを確立する
 #define RES_DATA_CONECT					"150 File status okay; about to open data connection.\r\n"
+// ディレクトリ情報送る
+#define RES_LIST_NLIST					"150 Here comes the directory listing.\r\n"
+// データを送る RETR
+#define RES_RETR						"150 Opening BINARY mode data connection for %s (%ld bytes)...\r\n"
+// データを送る STOR
+#define RES_STOR						"150 OK to send data.\r\n"
 // コマンドは正常に受け入れられた
 #define RES_COMMAND_OK					"200 Command okay."
 #define RES_COMMAND_OK_B				"200 Okay Binary mode"
@@ -37,6 +43,8 @@
 #define RES_DATA_CONNECT_DONE			"225 Data connection open; no transfer in progress.\r\n" 
 // 要求されたリクエストは成功した。データコネクションをクローズする
 #define RES_REQ_DONE_CLOSE_DATA_CONNECT	"226 Closing data connection.\r\n" 
+#define RES_REQ_DONE_STOR_RETR			"226 Transfer Complete.\r\n" 
+#define RES_REQ_DONE_NLIST_LIST			"226 Directory send ok.\r\n" 
 // PASVコマンドへのレスポンス。h1～h4はIPアドレス、p1～p2はポート番号を示す
 #define RES_PASV						"227 Entering Passive Mode(%d , %d , %d , %d , %d , %d).\r\n" 
 // ユーザーログインの成功

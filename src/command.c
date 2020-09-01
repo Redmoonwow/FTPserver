@@ -33,7 +33,7 @@ int D_HELP(char* e_args);	//実装状況
 int D_NOOP(char* e_args);	//実装状況
 int D_FEAT(char* e_args);	//実装状況
 
-static int responce(char* e_res , int e_res_size);
+int responce(char* e_res , int e_res_size);
 static int responcepsv(int e_port);
 #define RESPONCE(e_res) responce(e_res , strlen(e_res))
 
@@ -279,11 +279,48 @@ int D_TYPE(char* e_args)
 
 int D_RETR(char* e_args)
 {
+	// ファイルが存在するか確認
+	struct stat a_stat_data;
+	memset(&a_stat_data , 0x00 , sizeof(a_stat_data));
+	if ( 0 != stat(e_args , &a_stat_data) )
+	{
+		return RESPONCE(RES_NOT_ARGS);
+	}
+
+	// ファイル種別を確認
+	if ( 1 != (S_IFREG & a_stat_data.st_mode) )
+	{
+		// 通常ファイルではないので中断する
+		return RESPONCE(RES_NOT_ARGS);
+	}
+
+	// ファイルパス格納
+	memcpy(g_my_session_ptr->m_use_filepath , e_args , strlen(e_args));
+
+	g_my_session_ptr->m_session_command = CMD_RETR;
+
+	st_msg_req_execute_cmd a_req_msg;
+	memset(&a_req_msg , 0 , sizeof(a_req_msg));
+	a_req_msg.m_mq_header.m_commandcode = FTP_MSG_REQ_EXECUTE_CMD;
+
+	int a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_req_msg , sizeof(a_req_msg));
+
 	return 0;
 }
 
 int D_STOR(char* e_args)
 {
+	// ファイルパス格納
+	memcpy(g_my_session_ptr->m_use_filepath , e_args , strlen(e_args));
+
+	g_my_session_ptr->m_session_command = CMD_STOR;
+
+	st_msg_req_execute_cmd a_req_msg;
+	memset(&a_req_msg , 0 , sizeof(a_req_msg));
+	a_req_msg.m_mq_header.m_commandcode = FTP_MSG_REQ_EXECUTE_CMD;
+
+	int a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_req_msg , sizeof(a_req_msg));
+
 	return 0;
 }
 
@@ -407,7 +444,6 @@ int D_RMD(char* e_args)
 	{
 		return RESPONCE(RES_COMMAND_ARGS);
 	}
-	
 
 	return RESPONCE(RES_COMMAND_ARGS);
 }
@@ -465,12 +501,28 @@ int D_XPWD(char* e_args)
 
 int D_NLST(char* e_args)
 {
-	return RESPONCE(RES_COMMAND_NONE);
+	g_my_session_ptr->m_session_command = CMD_NLIST;
+
+	st_msg_req_execute_cmd a_req_msg;
+	memset(&a_req_msg , 0 , sizeof(a_req_msg));
+	a_req_msg.m_mq_header.m_commandcode = FTP_MSG_REQ_EXECUTE_CMD;
+
+	int a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_req_msg , sizeof(a_req_msg));
+
+	return NORMAL_RETURN;
 }
 
 int D_LIST(char* e_args)
 {
-	return 0;
+	g_my_session_ptr->m_session_command = CMD_LIST;
+
+	st_msg_req_execute_cmd a_req_msg;
+	memset(&a_req_msg , 0 , sizeof(a_req_msg));
+	a_req_msg.m_mq_header.m_commandcode = FTP_MSG_REQ_EXECUTE_CMD;
+
+	int a_return = SendMQ_CHILD(CMP_NO_SESSION_COMMAND_ID , g_my_session_ptr->m_session_id , CHILD_CMD , &a_req_msg , sizeof(a_req_msg));
+
+	return NORMAL_RETURN;
 }
 
 int D_SYST(char* e_args)

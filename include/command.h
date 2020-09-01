@@ -43,6 +43,7 @@ extern int D_NOOP(char* e_args);
 extern int D_FEAT(char* e_args);
 extern int Respsv(void);
 extern int Respsvfail(void);
+extern int responce(char* e_res , int e_res_size);
 #endif
 
 

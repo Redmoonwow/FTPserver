@@ -15,8 +15,6 @@ static int32_t CreateList(char* e_data_ptr);
 static int32_t NtfStartIdleFileif(char* e_message);
 static int32_t RecvRead(char* e_message);
 static int32_t RecvWrite(char* e_message);
-static int32_t RecvLIST(char* e_message);
-static int32_t RecvNLIST(char* e_message);
 static int32_t RecvEndThread(char* e_message);
 
 static st_function_msg_list s_function_list [] =
@@ -25,8 +23,6 @@ static st_function_msg_list s_function_list [] =
 	{	FTP_MSG_NTF_START_IDLE_FILEIF		,NtfStartIdleFileif			},
 	{	FTP_MSG_REQ_FILE_READ_CHILD			,RecvRead					},
 	{	FTP_MSG_REQ_FILE_WRITE_CHILD		,RecvWrite					},
-	{	FTP_MSG_REQ_FILE_LIST_CHILD			,RecvLIST					},
-	{	FTP_MSG_REQ_FILE_NLIST_CHILD		,RecvNLIST					},
 	{	FTP_MSG_REQ_END_THREAD_FILEIF		,RecvEndThread				},
 	{	0xFFFF								,NULL						}
 };
@@ -178,18 +174,6 @@ static int32_t RecvRead(char* e_message)
 static int32_t RecvWrite(char* e_message)
 {
 	g_my_session_ptr->m_Fileif_state = CHILD_FILEIF_STATE_RECIVING;
-	return NORMAL_RETURN;
-}
-
-static int32_t RecvLIST(char* e_message)
-{
-	g_my_session_ptr->m_Fileif_state = CHILD_FILEIF_STATE_TRANSING_LIST;
-	return NORMAL_RETURN;
-}
-
-int32_t RecvNLIST(char* e_message)
-{
-	g_my_session_ptr->m_Fileif_state = CHILD_FILEIF_STATE_TRANSING_NLIST;
 	return NORMAL_RETURN;
 }
 

@@ -19,13 +19,18 @@ static __thread int					s_socket_done = 0;
 static int32_t ReqConnectPort(char* e_message);
 static int32_t NtfWakeDoneFileif(char* e_message);
 static int32_t NtfStartIdleTrans(char* e_message);
+static int32_t RecvreqExecuteCMD(char* e_message);
+
+static int32_t SentList(void);
+static int32_t SentNList(void);
 
 static st_function_msg_list s_function_list [] =
 {
 		//	COMMAND						,FUNC
-	{	FTP_MSG_RES_CONNECT_PORT_CHILD		,ReqConnectPort				},
+	{	FTP_MSG_REQ_CONNECT_PORT_CHILD		,ReqConnectPort				},
 	{	FTP_MSG_NTF_WAKE_DONE_FILEIF		,NtfWakeDoneFileif			},
 	{	FTP_MSG_NTF_START_IDLE_TRANS		,NtfStartIdleTrans			},
+	{	FTP_MSG_REQ_EXECUTE_CMD				,RecvreqExecuteCMD			},
 	{	0xFFFF								,NULL						}
 };
 
@@ -258,17 +263,17 @@ void* TransThread(void* argv)
 				g_my_session_ptr->m_Trans_state = CHILD_TRANS_STATE_WAIT_MSG;
 				break;
 
-				case CHILD_TRANS_STATE_CHECK_CMD:
+			case CHILD_TRANS_STATE_CHECK_CMD:
 				switch ( g_my_session_ptr->m_session_command )
 				{ 
 					case CMD_STOR:
 						g_my_session_ptr->m_Trans_state = CHILD_TRANS_STATE_RECVING;
 					case CMD_RETR:
-						g_my_session_ptr->m_Trans_state = CHILD_TRANS_STATE_WAIT_PUSH;
+						g_my_session_ptr->m_Trans_state = CHILD_TRANS_STATE_WAIT_PUSH_FILE;
 					case CMD_NLIST:
-						g_my_session_ptr->m_Trans_state = CHILD_TRANS_STATE_WAIT_PUSH;
+						g_my_session_ptr->m_Trans_state = CHILD_TRANS_STATE_NLIST_SEND;
 					case CMD_LIST:
-						g_my_session_ptr->m_Trans_state = CHILD_TRANS_STATE_WAIT_PUSH;
+						g_my_session_ptr->m_Trans_state = CHILD_TRANS_STATE_LIST_SEND;
 				}
 				break;
 
@@ -344,4 +349,20 @@ static int32_t NtfStartIdleTrans(char* e_message)
 	int a_return = SendMQ_CHILD(CMP_NO_CHILD , g_my_session_ptr->m_session_id , CHILD_FILEIF , &a_msg , sizeof(a_msg));
 
 	return NORMAL_RETURN;
+}
+
+int32_t RecvreqExecuteCMD(char* e_message)
+{
+	g_my_session_ptr->m_Trans_state = CHILD_TRANS_STATE_CHECK_CMD;
+	return NORMAL_RETURN;
+}
+
+int32_t SentList(void)
+{
+	return int32_t( );
+}
+
+int32_t SentNList(void)
+{
+	return int32_t( );
 }

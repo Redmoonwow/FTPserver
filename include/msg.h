@@ -49,16 +49,15 @@
 #define FTP_MSG_NTF_START_IDLE_TRANS		FTP_MSG_BASE_CHILD_THREAD	| 0x0205 // 運用開始通知(TRANS)
 #define FTP_MSG_REQ_END_THREAD_TRANS		FTP_MSG_BASE_CHILD_THREAD	| 0x0206 // スレッド終了要求(TRANS)
 #define FTP_MSG_RES_END_THREAD_TRANS		FTP_MSG_BASE_CHILD_THREAD	| 0x0207 // スレッド終了応答(TRANS)
+#define FTP_MSG_REQ_EXECUTE_CMD				FTP_MSG_BASE_CHILD_THREAD	| 0x0208 // コマンド実行要求
+#define FTP_MSG_RES_EXECUTE_CMD				FTP_MSG_BASE_CHILD_THREAD	| 0x0209 // コマンド実行応答
+#define FTP_MSG_NTF_TRANS_COMP				FTP_MSG_BASE_CHILD_THREAD	| 0x020A // 転送完了通知
 
 // FILEIF <==> TRANS
 #define FTP_MSG_REQ_FILE_READ_CHILD			FTP_MSG_BASE_CHILD_THREAD	| 0x0300 // 子プロセス読取要求
 #define FTP_MSG_RES_FILE_READ_CHILD			FTP_MSG_BASE_CHILD_THREAD	| 0x0301 // 子プロセス読取応答
 #define FTP_MSG_REQ_FILE_WRITE_CHILD		FTP_MSG_BASE_CHILD_THREAD	| 0x0302 // 子プロセス書込要求
 #define FTP_MSG_RES_FILE_WRITE_CHILD		FTP_MSG_BASE_CHILD_THREAD	| 0x0303 // 子プロセス書込応答
-#define FTP_MSG_REQ_FILE_LIST_CHILD			FTP_MSG_BASE_CHILD_THREAD	| 0x0304 // 子プロセスリスト要求
-#define FTP_MSG_RES_FILE_LIST_CHILD			FTP_MSG_BASE_CHILD_THREAD	| 0x0305 // 子プロセスリスト応答
-#define FTP_MSG_REQ_FILE_NLIST_CHILD		FTP_MSG_BASE_CHILD_THREAD	| 0x0304 // 子プロセスNリスト要求
-#define FTP_MSG_RES_FILE_NLIST_CHILD		FTP_MSG_BASE_CHILD_THREAD	| 0x0305 // 子プロセスNリスト応答
 #define FTP_MSG_NTF_WAKE_DONE_FILEIF        FTP_MSG_BASE_CHILD_THREAD	| 0x0306 // 起動完了通知(FILEIF)
 #define FTP_MSG_NTF_START_IDLE_FILEIF		FTP_MSG_BASE_CHILD_THREAD	| 0x0307 // 運用開始通知(FILEIF)
 #define FTP_MSG_REQ_END_THREAD_FILEIF		FTP_MSG_BASE_CHILD_THREAD	| 0x0208 // スレッド終了要求(FILEIF)
@@ -250,6 +249,28 @@ typedef struct st_msg_res_connect_port_child
 	st_mq_header	m_mq_header;
 	int				m_result;
 }st_msg_res_connect_port_child;
+
+// コマンド実行要求
+typedef struct st_msg_req_execute_cmd
+{
+	st_mq_header	m_mq_header;
+	int				m_result;
+}st_msg_req_execute_cmd;
+
+// コマンド実行応答
+typedef struct st_msg_res_execute_cmd
+{
+	st_mq_header	m_mq_header;
+	int				m_result;
+}st_msg_res_execute_cmd;
+
+// 転送完了通知
+typedef struct st_msg_ntf_trans_cmp
+{
+	st_mq_header	m_mq_header;
+	int				m_result;
+}st_msg_ntf_trans_cmp;
+
 
 // 子プロセス読取要求
 typedef struct st_msg_req_file_read_child

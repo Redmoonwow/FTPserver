@@ -18,11 +18,13 @@ static int32_t RecvResAcceptChild(char* e_message);
 static int32_t RecvResQuitChild(char* e_message);
 static int32_t RecvReqResetChild(char* e_message);
 static int32_t RecvReqEndSessionChild(char* e_message);
-
-
 static int32_t RecvResTransferChild(char* e_message);
 static int32_t RecvResConnectPortChild(char* e_message);
 static int32_t RecvWakeDoneTrans(char* e_message);
+static int32_t RecvResExecuteCMD(char* e_message);
+static int32_t RecvNtfTransComplete(char* e_message);
+
+static void InitSessionData(void);
 
 static st_function_msg_list s_function_list [] =
 {
@@ -37,6 +39,8 @@ static st_function_msg_list s_function_list [] =
 	{	FTP_MSG_NTF_WAKE_DONE_TRANS			,RecvWakeDoneTrans			},
 	{	FTP_MSG_RES_CONNECT_PORT_CHILD		,RecvResConnectPortChild	},
 	{	FTP_MSG_RES_TRANSFER_CMD_CHILD		,RecvResTransferChild		},
+	{	FTP_MSG_RES_EXECUTE_CMD				,RecvResExecuteCMD			},
+	{	FTP_MSG_NTF_TRANS_COMP				,RecvNtfTransComplete		},
 	{	0xFFFF								,NULL						}
 };
 
@@ -557,5 +561,54 @@ static int32_t RecvWakeDoneTrans(char* e_message)
 		return ERROR_RETURN;
 	}
 	return NORMAL_RETURN;
+}
+
+static int32_t RecvResExecuteCMD(char* e_message)
+{
+	static char a_buf [4096];
+	memset(a_buf , 0x00 , sizeof(a_buf));
+	switch ( g_my_session_ptr->m_session_command )
+	{
+		case CMD_STOR:
+			return responce(RES_STOR , sizeof(RES_STOR));
+			break;
+		case CMD_RETR:
+			sprintf(a_buf , RES_RETR , g_my_session_ptr->m_use_filepath , g_my_session_ptr->m_data_bytes);
+			return responce(a_buf , strlen(a_buf) + 1);
+			break;
+		case CMD_LIST:
+		case CMD_NLIST:
+			return responce(RES_LIST_NLIST , sizeof(RES_LIST_NLIST));
+			break;
+	}
+
+	return ERROR_RETURN;
+}
+
+static int32_t RecvNtfTransComplete(char* e_message)
+{
+	static char a_buf [4096];
+	memset(a_buf , 0x00 , sizeof(a_buf));
+	switch ( g_my_session_ptr->m_session_command )
+	{
+		case CMD_STOR:
+		case CMD_RETR:
+			return responce(RES_REQ_DONE_STOR_RETR , sizeof(RES_REQ_DONE_STOR_RETR));
+			break;
+		case CMD_LIST:
+		case CMD_NLIST:
+			return responce(RES_REQ_DONE_NLIST_LIST , sizeof(RES_REQ_DONE_NLIST_LIST));
+			break;
+	}
+
+	InitSessionData( );
+
+	return ERROR_RETURN;
+}
+
+static void InitSessionData(void)
+{
+	g_my_session_ptr->m_data_bytes = 0;
+	memset(g_my_session_ptr->m_use_filepath , 0x00 , sizeof(g_my_session_ptr->m_use_filepath));
 }
 

@@ -27,7 +27,9 @@ typedef enum
 
 	CHILD_TRANS_STATE_WAIT_MSG = 0x1000,
 	CHILD_TRANS_STATE_CONNECT,
-	CHILD_TRANS_STATE_WAIT_PUSH,
+	CHILD_TRANS_STATE_WAIT_PUSH_FILE,
+	CHILD_TRANS_STATE_LIST_SEND,
+	CHILD_TRANS_STATE_NLIST_SEND,
 	CHILD_TRANS_STATE_CHECK_CMD,
 	CHILD_TRANS_STATE_TRANSING,
 	CHILD_TRANS_STATE_RECVING,
@@ -55,6 +57,7 @@ typedef struct st_session_data
 	pthread_t		m_trans_thread_id;
 	pthread_t		m_fileif_thread_id;
 	st_queue*		m_data_queue;
+	uint64_t		m_data_bytes;
 	struct st_session_flags
 	{
 		int				m_QUIT_flags;					// QUITƒtƒ‰ƒO
